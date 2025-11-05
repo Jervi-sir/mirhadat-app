@@ -1,0 +1,17 @@
+- make the taxonomy @done
+- make the wilaya picker sheet @done
+- make the filter sheet @done
+- make the toilet preview card @done
+- make the toilet screen @done
+- make the list of the toilets in the flatlist main screen @done
+- make the map with the toilets as dots @done
+- when click on dot map then show the toilet info in action sheet then more info if needed @done
+- make the wilaya picker pass the wilaya it self @done
+- console log the filters @done
+- apply the api in the list @done
+- make zustand @done
+- 
+- in map console log the filters, @done
+- take me to the map @done
+- integrate the api in the map too @done
+- use the zustand @done
