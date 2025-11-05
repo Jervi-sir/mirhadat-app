@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "r
 import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
 import api from "@/utils/axios-instance";
 import { ApiRoutes, buildRoute } from "@/utils/api";
+import { WilayaType } from "@/utils/types";
 
 /* ---------- Types ---------- */
 type ID = number;
@@ -11,38 +12,18 @@ type Scope = "all" | "with_toilets";
 type Lang = "en" | "fr" | "ar";
 type Status = "pending" | "active" | "suspended";
 
-export interface Wilaya {
-  id: ID;
-  code: string;
-  number: number;
-  en: string | null;
-  fr: string | null;
-  ar: string | null;
-
-  center_lat: number | null;
-  center_lng: number | null;
-  default_radius_km: number | null;
-  min_lat: number | null;
-  max_lat: number | null;
-  min_lng: number | null;
-  max_lng: number | null;
-
-  createdAt: ISODateTime;
-  updatedAt: ISODateTime;
-}
-
 /** API adds a computed display label */
-type WilayaApi = Wilaya & { label: string; toilets_count?: number | null };
+type WilayaApi = WilayaType & { label: string; toilets_count?: number | null };
 type ApiResp<T> = { data: T };
 
 /* ---------- Helpers ---------- */
-function nameByLang(w: Wilaya, lang: Lang) {
+function nameByLang(w: WilayaType, lang: Lang) {
   if (lang === "fr") return w.fr ?? w.en ?? w.ar ?? w.code;
   if (lang === "en") return w.en ?? w.fr ?? w.ar ?? w.code;
   return w.ar ?? w.fr ?? w.en ?? w.code;
 }
 
-function computeLabelFromWilaya(w: Wilaya, lang: Lang) {
+function computeLabelFromWilaya(w: WilayaType, lang: Lang) {
   const name = nameByLang(w, lang);
   return `${w.number} - ${name}`;
 }
@@ -61,7 +42,7 @@ export default function WilayaPicker({
   withCounts = false,
   taxonomyUrl = buildRoute(ApiRoutes.taxonomy),
 }: {
-  value?: Wilaya | null;
+  value?: WilayaType | null;
   onChangeWilaya?: (wilaya?: WilayaApi) => void;
 
   placeholder?: string;
@@ -262,7 +243,7 @@ export default function WilayaPicker({
           <Text style={{ fontSize: 18, fontWeight: "700" }}>
             {lang === "fr" ? "Choisir la wilaya" : "Choose wilaya"}
           </Text>
-
+          {/* 
           <TextInput
             placeholder={lang === "fr" ? "Rechercher..." : "Search..."}
             value={qInternal}
@@ -275,7 +256,7 @@ export default function WilayaPicker({
               paddingVertical: 8,
               backgroundColor: "#fff",
             }}
-          />
+          /> */}
 
           {loading ? (
             <View style={{ paddingVertical: 16 }}>

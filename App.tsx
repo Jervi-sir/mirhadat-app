@@ -22,6 +22,7 @@ import DiscoverScreen from './screens/discover/discover-screen';
 import ToiletListItemExample from './screens/toilet-list-item-screen';
 import ToiletOfferScreen from './screens/common/toilet-offer/toilet-offer-screen';
 import DiscoverMapScreen from './screens/discover/discover-map-screen';
+import { ExternalOpenerProvider } from './context/external-opener';
 
 export default function App() {
     const navigationRef = useNavigationContainerRef();
@@ -46,9 +47,9 @@ export default function App() {
       <NavigationContainer ref={navigationRef}>
         <SafeAreaProvider>
           <KeyboardProvider statusBarTranslucent>
-            <>
+            <ExternalOpenerProvider>
               <Navigation />
-            </>
+            </ExternalOpenerProvider>
           </KeyboardProvider>
         </SafeAreaProvider>
       </NavigationContainer>

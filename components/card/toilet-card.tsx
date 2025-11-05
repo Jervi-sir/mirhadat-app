@@ -9,6 +9,8 @@ import {
 import React, { useMemo } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Image } from 'expo-image';
+import { useNavigation } from "@react-navigation/native";
+import { Routes } from "@/utils/variables/routes";
 
 export function ToiletCard({
   item,
@@ -18,7 +20,7 @@ export function ToiletCard({
   onPress?: () => void;
 }) {
   const data = useMemo<ToiletWithRelationsType>(() => item ?? makeFakeToilet(), [item]);
-
+const navigation: any = useNavigation();
   const categoryLabel =
     data.category?.en || data.category?.fr || data.category?.ar || "—";
 
@@ -46,7 +48,12 @@ export function ToiletCard({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        if(onPress) onPress();
+        else {
+          navigation.navigate(Routes.ToiletOfferScreen, { toiletId: item?.id })
+        }
+      }}
       style={{
         backgroundColor: "#fff",
         padding: 12,

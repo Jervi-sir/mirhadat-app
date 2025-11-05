@@ -180,7 +180,7 @@ export const NearbyToiletsSheet = forwardRef<NearbyToiletsSheetRef, { wilayaId?:
                   item={item}
                   onPress={() => {
                     sheetRef.current?.hide();
-                    navigation.navigate(Routes.ToiletOfferScreen);
+                    navigation.navigate(Routes.ToiletOfferScreen, { toiletId: item?.id })
                   }}
                 />
               )}

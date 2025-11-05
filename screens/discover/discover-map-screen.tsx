@@ -11,11 +11,6 @@ import { useDiscoverMapStore } from "@/zustand/discover-map-store";
 import type { WilayaType, ToiletMarkerType } from "@/utils/types";
 import { DEFAULT_CENTER, kmToLatDelta, kmToLngDelta, makeRegion } from "@/utils/geo";
 import { ArrowLeft } from "lucide-react-native";
-import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
-import { ApiRoutes, buildRoute } from "@/utils/api";
-import { apiPublic } from "@/utils/axios-instance";
-import { ToiletCard } from "@/components/card/toilet-card";
-import { FlatList } from "react-native";
 import { NearbyToiletsSheet, NearbyToiletsSheetRef } from "./nearby-toilets-action-sheet";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");

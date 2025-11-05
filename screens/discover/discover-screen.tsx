@@ -8,7 +8,7 @@ import { FilterSheet } from "@/components/filters/filter-sheet";
 import { ToiletCard } from "@/components/card/toilet-card";
 import { useDiscoverStore } from "@/zustand/discover-store";
 import { useNavigation } from "@react-navigation/native";
-import { ToiletWithRelationsType } from "@/utils/types";
+import { ToiletWithRelationsType, WilayaType } from "@/utils/types";
 
 let Location: any;
 try { Location = require("expo-location"); } catch { }
@@ -37,7 +37,7 @@ export default function DiscoverScreen() {
   // Sheets
   const filterRef = useRef<ActionSheetRef>(null);
   const onOpenDetails = (t: ToiletWithRelationsType) => {
-    navigation.navigate(Routes.ToiletOfferScreen)
+    navigation.navigate(Routes.ToiletOfferScreen, { toiletId: t?.id })
     // selectToilet(t);
     // detailsRef.current?.show();
   };
@@ -50,8 +50,10 @@ export default function DiscoverScreen() {
           {/* Top 1 */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <WilayaPicker
+              // @ts-ignore
               value={selectedWilaya}
-              onChangeWilaya={(w) => setSelectedWilaya(w)} // w is full object (or undefined for "All")
+              // @ts-ignore
+              onChangeWilaya={(w: any) => setSelectedWilaya(w)} // w is full object (or undefined for "All")
               lang="fr"
               scope="with_toilets"
               status="active"
@@ -83,7 +85,7 @@ export default function DiscoverScreen() {
           data={items}
           keyExtractor={(it) => String(it.id)}
           renderItem={({ item }) => (
-            <ToiletCard item={item} onPress={() => navigation.navigate(Routes.ToiletOfferScreen)} />
+            <ToiletCard item={item} />
           )}
           contentContainerStyle={{ padding: 16, paddingTop: 0 }}
           onEndReachedThreshold={0.2}
@@ -100,6 +102,7 @@ export default function DiscoverScreen() {
 
       {/* Filter Sheet */}
       <FilterSheet
+        // @ts-ignore
         sheetRef={filterRef}
         initial={filters}
         onApply={(f) => setFilters(f)}
