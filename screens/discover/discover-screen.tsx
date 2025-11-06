@@ -1,4 +1,4 @@
-import { View, Text, Pressable, FlatList, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, FlatList, ActivityIndicator, Alert } from "react-native";
 import { ScreenWrapper } from "@/components/screen-wrapper";
 import { Routes } from "@/utils/variables/routes";
 import WilayaPicker from "@/components/filters/wilaya-picker";
@@ -9,6 +9,8 @@ import { ToiletCard } from "@/components/card/toilet-card";
 import { useDiscoverStore } from "@/zustand/discover-store";
 import { useNavigation } from "@react-navigation/native";
 import { ToiletWithRelationsType, WilayaType } from "@/utils/types";
+import FAB from 'react-native-animated-fab';
+import { FloatingButton } from "@/components/floating-button";
 
 let Location: any;
 try { Location = require("expo-location"); } catch { }
@@ -44,8 +46,10 @@ export default function DiscoverScreen() {
 
   return (
     <ScreenWrapper>
+       
       <View style={{ flex: 1, backgroundColor: "#fff" }}>
         {/* Top */}
+        
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, backgroundColor: "#fafafa" }}>
           {/* Top 1 */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

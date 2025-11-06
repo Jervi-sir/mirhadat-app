@@ -17,9 +17,12 @@
 - use the zustand @done
 - show the toilet info @done
 - favorite the toilet
+  - login issue like when i get the token, the currenttoken is not holding it
 - call the owner @done
 - 
-- go to direction
+- go to direction @done
 - 
 - post a toilet as host
-- 
+- login
+- register
+- become a host

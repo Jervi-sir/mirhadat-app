@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { FloatingButton } from './floating-button';
 
 type Props = {
   children: React.ReactNode;
@@ -96,7 +97,12 @@ export const ScreenWrapper: React.FC<Props> = ({
     Body
   );
 
-  if (!backgroundImage) return Content;
+  if (!backgroundImage) return (
+    <>
+      <FloatingButton />
+      {Content}
+    </>
+  );
 
   if (!animateBackground) {
     return (
@@ -108,6 +114,8 @@ export const ScreenWrapper: React.FC<Props> = ({
         {backgroundOverlayColor ? (
           <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: backgroundOverlayColor }} />
         ) : null}
+
+        <FloatingButton />
         {Content}
       </ImageBackground>
     );
@@ -186,6 +194,8 @@ export const ScreenWrapper: React.FC<Props> = ({
           <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: backgroundOverlayColor }} />
         ) : null}
       </AnimatedImageBackground>
+
+      <FloatingButton />
 
       {Content}
     </View>

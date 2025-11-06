@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import api from "@/utils/axios-instance";
+import api, { apiPublic } from "@/utils/axios-instance";
 import type {
   ToiletWithRelationsType,
   DayOfWeekType,
@@ -25,6 +25,7 @@ import type {
 import { ScreenWrapper } from "@/components/screen-wrapper";
 import { ArrowLeft } from "lucide-react-native";
 import { mapsUrl, telUrl, useExternalOpener } from "@/context/external-opener";
+import FavoriteToiletButton from "./favorite-toilet-button";
 
 /* ------------------------------ Label maps ------------------------------ */
 
@@ -81,7 +82,7 @@ export default function ToiletOfferScreen() {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get<{ data: ToiletWithRelationsType }>(`/toilets/${toiletId}`, {
+      const res = await apiPublic.get<{ data: ToiletWithRelationsType }>(`/toilets/${toiletId}`, {
         params: {
           include:
             "relations,labels,coords,pricing,counts,meta", // your controller already maps these
@@ -183,16 +184,13 @@ export default function ToiletOfferScreen() {
             )}
 
             {/* Favorite quick toggle (local) */}
-            <Pressable
-              style={styles.favBadge}
-              onPress={() => {
-                // TODO: wire to POST/DELETE /favorites
-                setFav((v) => !(v ?? false));
-              }}
-              hitSlop={10}
-            >
-              <Text style={styles.favTxt}>{fav ? "♥" : "♡"}</Text>
-            </Pressable>
+            <View style={styles.favBadge}>
+              <FavoriteToiletButton 
+                toiletId={data.id}
+                initial={data.is_favorite}
+              />
+            </View>
+
           </View>
 
           {/* Title + meta */}

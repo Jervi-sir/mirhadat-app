@@ -3,8 +3,7 @@ import { Button } from "@/components/button";
 import { GeneralInput } from "@/components/general-input";
 import { ScreenWrapper } from "@/components/screen-wrapper";
 import { ToiletPreviewCard } from "@/components/toilet-preview-card";
-import React from "react";
-import { SafeAreaView, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 
  const ToiletListItemExample = () => { 
   return (
