@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import api, { apiPublic } from "@/utils/axios-instance";
+import api from "@/utils/api/axios-instance";
 import type {
   ToiletWithRelationsType,
   DayOfWeekType,
@@ -26,6 +26,7 @@ import { ScreenWrapper } from "@/components/screen-wrapper";
 import { ArrowLeft } from "lucide-react-native";
 import { mapsUrl, telUrl, useExternalOpener } from "@/context/external-opener";
 import FavoriteToiletButton from "./favorite-toilet-button";
+import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme";
 
 /* ------------------------------ Label maps ------------------------------ */
 
@@ -77,19 +78,21 @@ export default function ToiletOfferScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [fav, setFav] = useState<boolean | null>(null); // local optimistic
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
 
   const fetchToilet = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await apiPublic.get<{ data: ToiletWithRelationsType }>(`/toilets/${toiletId}`, {
+      const res = await api.get<{ data: ToiletWithRelationsType }>(`/toilets/${toiletId}`, {
+        authIfAvailable: true,
         params: {
-          include:
-            "relations,labels,coords,pricing,counts,meta", // your controller already maps these
+          include: "relations,labels,coords,pricing,counts,meta",
         },
       });
       setData(res.data.data);
       setFav(res.data.data.is_favorite ?? false);
+      setSelectedPhone(res.data.data.phone_numbers?.[0] ?? null);
     } catch (e: any) {
       setError(e?.response?.data?.message || e?.message || "Failed to load");
     } finally {
@@ -104,6 +107,18 @@ export default function ToiletOfferScreen() {
   useEffect(() => {
     if (data?.name) navigation.setOptions({ title: data.name });
   }, [data?.name, navigation]);
+
+  useEffect(() => {
+    if (Array.isArray(data?.phone_numbers) && data.phone_numbers.length > 0) {
+      // keep current selection if still present; otherwise pick first
+      setSelectedPhone((curr) =>
+        // @ts-ignore
+        curr && data?.phone_numbers?.includes(curr) ? curr : data?.phone_numbers[0]
+      );
+    } else {
+      setSelectedPhone(null);
+    }
+  }, [data?.phone_numbers]);
 
   const coverUrl = useMemo(() => {
     if (data?.cover_photo?.url) return data.cover_photo.url;
@@ -123,19 +138,23 @@ export default function ToiletOfferScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-        <Text style={styles.muted}>Loading toilet…</Text>
+      <View style={[styles.center, { backgroundColor: T.bg.app }]}>
+        <ActivityIndicator color={T.colors.primary} />
+        <Text style={[styles.muted, { color: T.text.secondary }]}>Loading toilet…</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>Error: {error}</Text>
-        <Pressable style={styles.retryBtn} onPress={fetchToilet}>
-          <Text style={styles.retryTxt}>Retry</Text>
+      <View style={[styles.center, { backgroundColor: T.bg.app }]}>
+        <Text style={[styles.error, { color: T.colors.error }]}>Error: {error}</Text>
+        <Pressable
+          style={({ pressed }) => [styles.retryBtn, pressableStyles(pressed), { backgroundColor: T.colors.primary, ...shadow(1) }]}
+          android_ripple={{ color: withAlpha("#fff", 0.2) }}
+          onPress={fetchToilet}
+        >
+          <Text style={[styles.retryTxt, { color: T.text.onPrimary }]}>Retry</Text>
         </Pressable>
       </View>
     );
@@ -143,68 +162,89 @@ export default function ToiletOfferScreen() {
 
   if (!data) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>Not found.</Text>
+      <View style={[styles.center, { backgroundColor: T.bg.app }]}>
+        <Text style={[styles.muted, { color: T.text.secondary }]}>Not found.</Text>
       </View>
     );
   }
 
   return (
-    <ScreenWrapper>
-      <View style={{ position: 'relative' }}>
-        <View style={{ position: 'absolute', top: 10, left: 10, zIndex: 99 }}>
+    <>
+      <View style={{ position: "relative", backgroundColor: T.bg.app }}>
+        {/* Floating back */}
+        <View style={{ position: "absolute", top: 44, left: S.md, zIndex: 99 }}>
           <TouchableOpacity
+            activeOpacity={0.85}
             style={{
-              height: 40, width: 40,
-              borderRadius: 100, backgroundColor: '#fff',
-              justifyContent: 'center', alignItems: 'center'
+              height: 40,
+              width: 40,
+              borderRadius: 100,
+              backgroundColor: T.bg.surface,
+              justifyContent: "center",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: T.border.subtle,
+              ...shadow(1),
             }}
             onPress={() => navigation.goBack()}
           >
-            <ArrowLeft />
+            <ArrowLeft color={T.text.strong as string} />
           </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={styles.container}>
+
+        <ScrollView contentContainerStyle={[styles.container]}>
           {/* Cover */}
           <View style={{ position: "relative" }}>
-
             {coverUrl ? (
-              <Image source={{ uri: coverUrl }} style={styles.cover} resizeMode="cover" />
+              <Image source={{ uri: coverUrl }} style={[styles.cover, { backgroundColor: T.bg.surfaceAlt }]} resizeMode="cover" />
             ) : (
-              <View style={[styles.cover, styles.coverFallback]}>
-                <Text style={styles.coverFallbackTxt}>No photo</Text>
+              <View style={[styles.cover, styles.coverFallback, { backgroundColor: T.bg.surfaceAlt }]}>
+                <Text style={[styles.coverFallbackTxt, { color: T.text.secondary }]}>No photo</Text>
               </View>
             )}
 
             {/* Rating badge */}
             {Number.isFinite(data.avg_rating) && (
-              <View style={styles.ratingBadge}>
-                <Text style={styles.ratingTxt}>{Number(data.avg_rating).toFixed(1)} ★</Text>
+              <View
+                style={[
+                  styles.ratingBadge,
+                  {
+                    backgroundColor: withAlpha("#000", 0.7),
+                    ...shadow(1),
+                  },
+                ]}
+              >
+                <Text style={[styles.ratingTxt, { color: "#fff" }]}>{Number(data.avg_rating).toFixed(1)} ★</Text>
               </View>
             )}
 
-            {/* Favorite quick toggle (local) */}
-            <View style={styles.favBadge}>
-              <FavoriteToiletButton 
-                toiletId={data.id}
-                initial={data.is_favorite}
-              />
+            {/* Favorite quick toggle */}
+            <View
+              style={[
+                styles.favBadge,
+                {
+                  backgroundColor: withAlpha("#fff", 0.9),
+                  borderColor: T.border.subtle,
+                  ...shadow(1),
+                },
+              ]}
+            >
+              <FavoriteToiletButton toiletId={data.id} initial={data.is_favorite} />
             </View>
-
           </View>
 
           {/* Title + meta */}
-          <View style={styles.card}>
-            <Text style={styles.title}>{data.name}</Text>
+          <View style={[styles.card, cardBase]}>
+            <Text style={[styles.title, { color: T.text.default }]}>{data.name}</Text>
 
             {/* Address + wilaya */}
-            <Text style={styles.sub}>
+            <Text style={[styles.sub, { color: T.text.secondary }]}>
               {data.address_line}
               {data.wilaya?.en ? ` • ${data.wilaya.en}` : data.wilaya?.fr ? ` • ${data.wilaya.fr}` : ""}
             </Text>
 
             {/* Category / Access / Unisex / Capacity */}
-            <Text style={styles.metaLine}>
+            <Text style={[styles.metaLine, { color: T.text.strong }]}>
               {categoryLabel ? `${categoryLabel} · ` : ""}
               {accessText} · {data.is_unisex ? "Unisex" : "Separate"}
               {" · "}
@@ -212,10 +252,10 @@ export default function ToiletOfferScreen() {
             </Text>
 
             {/* Place hint */}
-            {!!data.place_hint && <Text style={styles.hint}>Hint: {data.place_hint}</Text>}
+            {!!data.place_hint && <Text style={[styles.hint, { color: T.text.strong }]}>Hint: {data.place_hint}</Text>}
 
             {/* Status row */}
-            <View style={[styles.row, { alignItems: "center" }]}>
+            <View style={[styles.row]}>
               <Badge label={priceText} />
               {!!data.reviews_count && <Badge label={`${data.reviews_count} reviews`} />}
               {openNowInfo && (
@@ -233,7 +273,7 @@ export default function ToiletOfferScreen() {
           </View>
 
           {/* Price & Today */}
-          <View style={[styles.card, { flexDirection: "row", gap: 12 }]}>
+          <View style={[styles.card, cardBase, { flexDirection: "row", gap: S.md }]}>
             <Box
               label="Price"
               value={
@@ -248,39 +288,63 @@ export default function ToiletOfferScreen() {
           </View>
 
           {/* Address + actions */}
-          <View style={styles.card}>
-            <Text style={styles.h2}>Address</Text>
-            <Text style={{ color: "#4B5563", marginTop: 4 }}>{data.address_line}</Text>
+          <View style={[styles.card, cardBase]}>
+            <Text style={[styles.h2, { color: T.text.default }]}>Address</Text>
+            <Text style={{ color: T.text.secondary, marginTop: 4 }}>{data.address_line}</Text>
 
             {/* quick actions */}
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            <View style={{ flexDirection: "row", gap: S.sm, marginTop: S.sm }}>
               <Pressable
                 onPress={() => openExternal(mapsUrl(data.lat, data.lng, data.name), { label: "Opening Maps…" })}
-                style={styles.primaryBtn}
+                android_ripple={{ color: withAlpha("#fff", 0.2) }}
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  {
+                    backgroundColor: T.colors.primary,
+                    ...shadow(1),
+                  },
+                  pressableStyles(pressed),
+                ]}
               >
-                <Text style={styles.primaryBtnTxt}>Directions</Text>
+                <Text style={[styles.primaryBtnTxt, { color: T.text.onPrimary }]}>Directions</Text>
               </Pressable>
 
               <Pressable
+                disabled={!selectedPhone}
                 onPress={() => {
-                  const phone = data.phone_numbers?.[0];
-                  if (!phone) return;
-                  openExternal(telUrl(phone), { label: "Calling…" });
+                  if (!selectedPhone) return;
+                  openExternal(telUrl(selectedPhone), { label: "Calling…" });
                 }}
-                style={styles.secondaryBtn}
+                android_ripple={{ color: T.state.ripple }}
+                style={({ pressed }) => [
+                  styles.secondaryBtn,
+                  {
+                    borderColor: T.border.subtle,
+                    backgroundColor: T.bg.surface,
+                    opacity: selectedPhone ? 1 : 0.5,
+                  },
+                  pressableStyles(pressed),
+                ]}
               >
-                <Text style={styles.secondaryBtnTxt}>Call</Text>
+                <Text style={[styles.secondaryBtnTxt, { color: T.text.strong }]}>
+                  {selectedPhone ? "Call" : "No phone"}
+                </Text>
               </Pressable>
-
             </View>
 
             {/* phones list if more than 1 */}
-            {Array.isArray(data.phone_numbers) && data.phone_numbers.length > 1 && (
-              <View style={{ marginTop: 10 }}>
+            {Array.isArray(data.phone_numbers) && data.phone_numbers.length > 0 && (
+              <View style={{ marginTop: S.md, gap: 8 }}>
+                <Text style={{ color: T.text.tertiary, fontSize: 12, marginBottom: 2 }}>
+                  Choose a number to call
+                </Text>
                 {data.phone_numbers.map((ph, i) => (
-                  <Pressable key={`${ph}-${i}`} onPress={() => Linking.openURL(`tel:${ph}`)} style={{ paddingVertical: 6 }}>
-                    <Text style={{ color: "#111827" }}>• {ph}</Text>
-                  </Pressable>
+                  <RadioRow
+                    key={`${ph}-${i}`}
+                    label={ph}
+                    selected={selectedPhone === ph}
+                    onPress={() => setSelectedPhone(ph)}
+                  />
                 ))}
               </View>
             )}
@@ -288,12 +352,12 @@ export default function ToiletOfferScreen() {
 
           {/* Opening hours (weekly) */}
           {!!data.open_hours?.length && (
-            <View style={styles.card}>
-              <Text style={styles.h2}>Opening Hours</Text>
+            <View style={[styles.card, cardBase]}>
+              <Text style={[styles.h2, { color: T.text.default }]}>Opening Hours</Text>
               {weekRows(data.open_hours).map(({ label, value }) => (
                 <View key={label} style={styles.line}>
-                  <Text style={styles.lineKey}>{label}</Text>
-                  <Text style={styles.lineVal}>{value || "—"}</Text>
+                  <Text style={[styles.lineKey, { color: T.text.strong }]}>{label}</Text>
+                  <Text style={[styles.lineVal, { color: T.text.default }]}>{value || "—"}</Text>
                 </View>
               ))}
             </View>
@@ -301,9 +365,9 @@ export default function ToiletOfferScreen() {
 
           {/* Amenities */}
           {!!data.amenities?.length && (
-            <View style={styles.card}>
-              <Text style={styles.h2}>Amenities</Text>
-              <View style={styles.wrap}>
+            <View style={[styles.card, cardBase]}>
+              <Text style={[styles.h2, { color: T.text.default }]}>Amenities</Text>
+              <View style={[styles.wrap, { gap: S.sm }]}>
                 {data.amenities.map((code, i) => (
                   <Chip key={`${code}-${i}`} text={AMENITY_LABEL[code] ?? pretty(code)} />
                 ))}
@@ -313,9 +377,9 @@ export default function ToiletOfferScreen() {
 
           {/* Rules */}
           {!!data.rules?.length && (
-            <View style={styles.card}>
-              <Text style={styles.h2}>Rules</Text>
-              <View style={styles.wrap}>
+            <View style={[styles.card, cardBase]}>
+              <Text style={[styles.h2, { color: T.text.default }]}>Rules</Text>
+              <View style={[styles.wrap, { gap: S.sm }]}>
                 {data.rules.map((code, i) => (
                   <Chip key={`${code}-${i}`} text={RULE_LABEL[code] ?? pretty(code)} />
                 ))}
@@ -325,48 +389,48 @@ export default function ToiletOfferScreen() {
 
           {/* Host */}
           {data.owner && (
-            <View style={styles.card}>
-              <Text style={styles.h2}>Host</Text>
-              <Text>{data.owner.name ?? `#${data.owner.id}`}</Text>
+            <View style={[styles.card, cardBase]}>
+              <Text style={[styles.h2, { color: T.text.default }]}>Host</Text>
+              <Text style={{ color: T.text.strong }}>{data.owner.name ?? `#${data.owner.id}`}</Text>
             </View>
           )}
 
           {/* Photos Gallery */}
           {Array.isArray(data.photos) && data.photos.length > 1 && (
-            <View style={styles.card}>
-              <Text style={styles.h2}>Photos</Text>
+            <View style={[styles.card, cardBase]}>
+              <Text style={[styles.h2, { color: T.text.default }]}>Photos</Text>
               <FlatList
                 horizontal
                 data={data.photos}
                 keyExtractor={(p) => String(p.id ?? p.url)}
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 10 }}
-                renderItem={({ item }) => <Image source={{ uri: item.url }} style={styles.gallery} />}
+                contentContainerStyle={{ gap: S.sm }}
+                renderItem={({ item }) => (
+                  <Image source={{ uri: item.url }} style={[styles.gallery, { borderRadius: R.lg, backgroundColor: T.bg.surfaceAlt }]} />
+                )}
               />
             </View>
           )}
 
           {/* About */}
           {data.description ? (
-            <View style={styles.card}>
-              <Text style={styles.h2}>About</Text>
-              <Text style={{ color: "#4B5563", lineHeight: 20 }}>{data.description}</Text>
+            <View style={[styles.card, cardBase]}>
+              <Text style={[styles.h2, { color: T.text.default }]}>About</Text>
+              <Text style={{ color: T.text.secondary, lineHeight: 20 }}>{data.description}</Text>
             </View>
           ) : null}
 
           {/* Meta */}
-          <View style={[styles.card, { paddingVertical: 10 }]}>
-            <Text style={{ color: "#6B7280", fontSize: 12 }}>
+          <View style={[styles.card, cardBase, { paddingVertical: 10 }]}>
+            <Text style={{ color: T.text.tertiary, fontSize: 12 }}>
               Created {fmtDate(data.created_at)} · Updated {fmtDate(data.updated_at)}
             </Text>
           </View>
 
-          <View style={{ height: 24 }} />
+          <View style={{ height: S.lg }} />
         </ScrollView>
       </View>
-
-    </ScreenWrapper>
-
+    </>
   );
 }
 
@@ -402,17 +466,13 @@ function fmtDate(iso?: string | null) {
 }
 
 /* --------------------------- Hours & status --------------------------- */
-/**
- * Your DB uses 0..6 for Mon..Sun (per migration comment). JS Date.getDay() is Sun=0..Sat=6.
- * We support either thanks to a detection heuristic.
- */
 function computeOpenState(
   items?: NonNullable<ToiletWithRelationsType["open_hours"]>
 ): null | {
   isOpen: boolean;
-  opensAt?: string; // "09:00"
-  closesAt?: string; // "22:00"
-  todayText: string; // joined "09:00–22:00, ..."
+  opensAt?: string;
+  closesAt?: string;
+  todayText: string;
 } {
   if (!items || items.length === 0) return null;
 
@@ -420,25 +480,18 @@ function computeOpenState(
   const jsDaySun0 = now.getDay(); // 0..6 Sun..Sat
   const minutesNow = now.getHours() * 60 + now.getMinutes();
 
-  // Detect whether incoming day_of_week is Mon=0 or Sun=0 by checking distribution
-  // Heuristic: if we see rows with day_of_week===0 and also rows with ===6,
-  // we still can't be sure. Instead: if there is ANY row for JS Sunday (Sun=0)
-  // when mapping as Sun=0 -> OK; else try Mon=0 mapping.
   const todayRowsSun0 = items.filter((r) => r.day_of_week === (jsDaySun0 as DayOfWeekType));
-  const useMon0 = todayRowsSun0.length === 0; // if empty, likely Mon=0 scheme
+  const useMon0 = todayRowsSun0.length === 0;
 
-  const dayIndexToday = useMon0 ? ((jsDaySun0 + 6) % 7) : jsDaySun0; // map JS to Mon=0 when needed
+  const dayIndexToday = useMon0 ? ((jsDaySun0 + 6) % 7) : jsDaySun0;
   const labelToday = useMon0 ? DAY_NAMES_MON0[dayIndexToday] : DAY_NAMES_SUN0[dayIndexToday];
 
   const todays = items
     .filter((r) => r.day_of_week === (dayIndexToday as DayOfWeekType))
     .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
 
-  const todayText = todays
-    .map((r) => `${(r.opens_at ?? "").slice(0, 5)}–${(r.closes_at ?? "").slice(0, 5)}`)
-    .join(", ");
+  const todayText = todays.map((r) => `${(r.opens_at ?? "").slice(0, 5)}–${(r.closes_at ?? "").slice(0, 5)}`).join(", ");
 
-  // Determine open now
   let isOpen = false;
   let closesAt: string | undefined;
   let opensAt: string | undefined;
@@ -454,12 +507,10 @@ function computeOpenState(
   }
 
   if (!isOpen) {
-    // Find the next opening interval today
     const nextToday = todays.find((r) => minutesNow < hhmmToMinutes(r.opens_at));
     if (nextToday) {
       opensAt = (nextToday.opens_at ?? "").slice(0, 5);
     } else {
-      // Find the next open on upcoming days (within 7 days)
       for (let offset = 1; offset <= 7; offset++) {
         const target = (dayIndexToday + offset) % 7;
         const rows = items
@@ -484,15 +535,11 @@ function hhmmToMinutes(hhmmss?: string | null): number {
   return h * 60 + m;
 }
 
-/** Weekly rows (UI order based on detected scheme) */
 function weekRows(
   items: NonNullable<ToiletWithRelationsType["open_hours"]>
 ): { label: string; value: string }[] {
   if (!items.length) return [];
-  // detect if dataset looks like Mon=0 by checking if any "0" exists but today's Sun rows (Sun=0) are empty
-  // We'll just present Monday-first if most zeros appear attached to workweek shape; simpler: prefer Mon=0 (your migration).
-  const useMon0 = true; // your migration states 0..6 (Mon..Sun)
-
+  const useMon0 = true;
   const order = useMon0 ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4, 5, 6];
   const labels = useMon0 ? DAY_NAMES_MON0 : DAY_NAMES_SUN0;
 
@@ -513,44 +560,140 @@ function weekRows(
 
 function Badge({ label }: { label: string }) {
   return (
-    <View style={styles.badge}>
-      <Text style={styles.badgeTxt}>{label}</Text>
+    <View
+      style={{
+        backgroundColor: withAlpha(T.colors.primary, 0.08),
+        borderRadius: R.pill,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: T.border.subtle,
+      }}
+    >
+      <Text style={{ color: T.colors.primary, fontWeight: "700" }}>{label}</Text>
     </View>
   );
 }
 
 function Chip({ text }: { text: string }) {
   return (
-    <View style={styles.chip}>
-      <Text style={styles.chipTxt}>{text}</Text>
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderColor: T.border.subtle,
+        borderWidth: 1,
+        borderRadius: R.pill,
+        backgroundColor: T.bg.surface,
+      }}
+    >
+      <Text style={{ color: T.text.strong }}>{text}</Text>
     </View>
   );
 }
 
 function Box({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.infoBox}>
-      <Text style={styles.infoKey}>{label}</Text>
-      <Text style={styles.infoVal} numberOfLines={1}>
+    <View
+      style={{
+        flex: 1,
+        padding: 12,
+        backgroundColor: T.bg.surface,
+        borderRadius: R.lg,
+        borderWidth: 1,
+        borderColor: T.border.subtle,
+        ...shadow(0),
+      }}
+    >
+      <Text style={{ fontSize: 12, color: T.text.tertiary }}>{label}</Text>
+      <Text style={{ fontSize: 16, fontWeight: "700", marginTop: 2, color: T.text.default }} numberOfLines={1}>
         {value}
       </Text>
     </View>
   );
 }
 
+function RadioRow({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      android_ripple={{ color: withAlpha("#000", 0.06) }}
+      style={({ pressed }) => [
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          paddingVertical: 10,
+          paddingHorizontal: 10,
+          borderRadius: R.lg,
+          borderWidth: 1,
+          borderColor: T.border.subtle,
+          backgroundColor: T.bg.surface,
+        },
+        pressed ? { opacity: 0.96 } : null,
+      ]}
+    >
+      <Text style={{ color: T.text.default, fontWeight: "600" }}>{label}</Text>
+      <View
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 999,
+          borderWidth: 2,
+          borderColor: selected ? T.colors.primary : T.border.subtle,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: T.bg.surface,
+        }}
+      >
+        {selected ? (
+          <View
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: 999,
+              backgroundColor: T.colors.primary,
+            }}
+          />
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+
 /* -------------------------------- Styles -------------------------------- */
 
-const styles = StyleSheet.create({
-  container: { paddingBottom: 16 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  muted: { color: "#6B7280", marginTop: 8 },
-  error: { color: "#EF4444", marginBottom: 12, textAlign: "center" },
-  retryBtn: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#111827", borderRadius: 8 },
-  retryTxt: { color: "white", fontWeight: "600" },
+const cardBase = {
+  backgroundColor: T.bg.surface,
+  borderBottomWidth: 0,
+  borderWidth: 1,
+  borderColor: T.border.subtle,
+  borderRadius: R.xl,
+  marginTop: S.lg,
+  ...shadow(1),
+} as const;
 
-  cover: { width: "100%", height: 220, backgroundColor: "#E5E7EB" },
+const styles = StyleSheet.create({
+  container: { paddingBottom: S.lg },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: S["xxl"] },
+  muted: { marginTop: 8 },
+  error: { marginBottom: 12, textAlign: "center" },
+  retryBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: R.lg },
+  retryTxt: { fontWeight: "700" },
+
+  cover: { width: "100%", height: 340 },
   coverFallback: { alignItems: "center", justifyContent: "center" },
-  coverFallbackTxt: { color: "#6B7280" },
+  coverFallbackTxt: {},
 
   ratingBadge: {
     position: "absolute",
@@ -558,83 +701,58 @@ const styles = StyleSheet.create({
     bottom: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#111827",
+    borderRadius: R.pill,
   },
-  ratingTxt: { color: "#fff", fontWeight: "700" },
+  ratingTxt: { fontWeight: "800" },
 
   favBadge: {
     position: "absolute",
-    right: 10,
-    top: 10,
+    right: S.md,
+    top: 44,
     width: 40,
     height: 40,
     borderRadius: 100,
-    backgroundColor: "#ffffffcc",
     alignItems: "center",
     justifyContent: "center",
-    borderColor: "#E5E7EB",
     borderWidth: 1,
   },
-  favTxt: { fontSize: 26, color: "#EF4444" },
 
   card: {
-    padding: 16,
-    borderBottomColor: "#E5E7EB",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    backgroundColor: "#fff",
+    padding: S.lg,
+    marginHorizontal: S.md,
   },
-  title: { fontSize: 22, fontWeight: "700", color: "#111827" },
-  sub: { marginTop: 6, color: "#4B5563" },
-  metaLine: { marginTop: 6, color: "#374151" },
-  row: { marginTop: 10, flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  hint: { marginTop: 10, color: "#374151" },
+  title: { fontSize: 22, fontWeight: "800" },
+  sub: { marginTop: 6 },
+  metaLine: { marginTop: 6 },
+  row: { marginTop: 10, flexDirection: "row", gap: S.sm, flexWrap: "wrap" },
+  hint: { marginTop: 10 },
 
-  h2: { fontSize: 18, fontWeight: "700", marginBottom: 8, color: "#111827" },
+  h2: { fontSize: 18, fontWeight: "800", marginBottom: 8 },
 
   line: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 },
-  lineKey: { color: "#374151", width: 72, fontWeight: "600" },
-  lineVal: { color: "#111827", flex: 1, textAlign: "right" },
+  lineKey: { width: 72, fontWeight: "700" },
+  lineVal: { flex: 1, textAlign: "right" },
 
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  wrap: { flexDirection: "row", flexWrap: "wrap" },
 
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderColor: "#E5E7EB", borderWidth: 1, borderRadius: 999 },
-  chipTxt: { color: "#111827" },
+  gallery: { width: 230, height: 140 },
 
-  gallery: { width: 230, height: 140, borderRadius: 10, backgroundColor: "#E5E7EB" },
-
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  thumb: { width: "31%", aspectRatio: 1, borderRadius: 8, backgroundColor: "#E5E7EB" },
-
-  badge: { backgroundColor: "#F3F4F6", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  badgeTxt: { color: "#111827", fontWeight: "600" },
-
-  infoBox: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  infoKey: { fontSize: 12, color: "#777" },
-  infoVal: { fontSize: 16, fontWeight: "700", marginTop: 2 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: S.sm },
+  thumb: { width: "31%", aspectRatio: 1, borderRadius: R.md, backgroundColor: T.bg.surfaceAlt },
 
   primaryBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#111827",
+    borderRadius: R.lg,
     alignItems: "center",
   },
-  primaryBtnTxt: { color: "#fff", fontWeight: "700" },
+  primaryBtnTxt: { fontWeight: "800" },
   secondaryBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: R.lg,
     borderWidth: 1,
-    borderColor: "#111827",
     alignItems: "center",
   },
-  secondaryBtnTxt: { color: "#111827", fontWeight: "700" },
+  secondaryBtnTxt: { fontWeight: "800" },
 });

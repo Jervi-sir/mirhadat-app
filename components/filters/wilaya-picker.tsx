@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
-import api from "@/utils/axios-instance";
-import { ApiRoutes, buildRoute } from "@/utils/api";
+import api from "@/utils/api/axios-instance";
+import { ApiRoutes, buildRoute } from "@/utils/api/api";
 import { WilayaType } from "@/utils/types";
+import { theme as T, T as Typography, S, R, shadow, pressableStyles, withAlpha } from "@/ui/theme";
 
 /* ---------- Types ---------- */
 type ID = number;
@@ -48,8 +49,8 @@ export default function WilayaPicker({
   placeholder?: string;
   includeAll?: boolean;
   allLabel?: string;
-  triggerStyle?: any;
-  triggerTextStyle?: any;
+  triggerStyle?: ViewStyle;
+  triggerTextStyle?: TextStyle;
   lang?: Lang;
   scope?: Scope;
   status?: Status;
@@ -104,7 +105,6 @@ export default function WilayaPicker({
       labelCache.current.set(inRows.id, inRows.label);
       setDisplayLabel(inRows.label);
     } else {
-      // Recompute (language may have changed)
       const recomputed = computeLabelFromWilaya(value, lang);
       labelCache.current.set(value.id, recomputed);
       setDisplayLabel(recomputed);
@@ -201,30 +201,32 @@ export default function WilayaPicker({
       labelCache.current.set(id, w.label);
       setDisplayLabel(w.label);
       onChangeWilaya?.(w);
-    } else {
-      // Shouldn't happen, but no-op if item not found
     }
     sheetRef.current?.hide();
   };
 
   return (
-    <View>
+    <>
       {/* Trigger */}
       <Pressable
         onPress={handleOpen}
-        style={[
+        android_ripple={{ color: T.state.ripple }}
+        style={({ pressed }) => [
           {
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            borderRadius: 10,
+            paddingHorizontal: S.lg,
+            borderRadius: R.lg,
             borderWidth: 1,
-            borderColor: "#ddd",
-            backgroundColor: "#fff",
+            borderColor: T.border.subtle,
+            backgroundColor: T.bg.surface,
+            minHeight: 44,
+            justifyContent: "center",
+            ...shadow(0),
           },
+          pressableStyles(pressed),
           triggerStyle,
         ]}
       >
-        <Text style={[{ fontWeight: "600" }, triggerTextStyle]}>
+        <Text style={[{ color: T.text.strong, ...Typography.label, fontWeight: displayLabel ? 600 : 500 }, triggerTextStyle]}>
           {displayLabel ?? placeholder}
         </Text>
       </Pressable>
@@ -236,40 +238,67 @@ export default function WilayaPicker({
         closeOnTouchBackdrop
         drawUnderStatusBar
         defaultOverlayOpacity={0.3}
-        containerStyle={{ height: "69%", borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
-        indicatorStyle={{ width: 60, height: 5, borderRadius: 3, backgroundColor: "#111" }}
+        containerStyle={{
+          height: "70%",
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          backgroundColor: T.bg.surface,
+          borderTopWidth: 1,
+          borderColor: T.border.subtle,
+        }}
+        indicatorStyle={{
+          width: 60,
+          height: 5,
+          borderRadius: 3,
+          backgroundColor: withAlpha(T.text.default, 0.2),
+        }}
       >
-        <View style={{ padding: 12, gap: 8 }}>
-          <Text style={{ fontSize: 18, fontWeight: "700" }}>
+        <View style={{ padding: S.lg, gap: S.md }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: T.text.default }}>
             {lang === "fr" ? "Choisir la wilaya" : "Choose wilaya"}
           </Text>
-          {/* 
-          <TextInput
+
+          {/* Search (optional). Uncomment to enable */}
+          {/* <TextInput
             placeholder={lang === "fr" ? "Rechercher..." : "Search..."}
+            placeholderTextColor={T.text.tertiary}
             value={qInternal}
             onChangeText={setQInternal}
             style={{
               borderWidth: 1,
-              borderColor: "#e5e5e5",
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 8,
-              backgroundColor: "#fff",
+              borderColor: T.border.subtle,
+              borderRadius: R.lg,
+              paddingHorizontal: S.lg,
+              paddingVertical: 10,
+              backgroundColor: T.bg.surface,
+              color: T.text.default,
             }}
           /> */}
 
           {loading ? (
-            <View style={{ paddingVertical: 16 }}>
-              <ActivityIndicator />
+            <View style={{ paddingVertical: S.lg }}>
+              <ActivityIndicator color={T.colors.primary} />
             </View>
           ) : err ? (
-            <View style={{ paddingVertical: 16, alignItems: "center", gap: 8 }}>
-              <Text>{lang === "fr" ? "Échec du chargement." : "Failed to load. Check connection."}</Text>
+            <View style={{ paddingVertical: S.lg, alignItems: "center", gap: S.sm }}>
+              <Text style={{ color: T.text.secondary }}>
+                {lang === "fr" ? "Échec du chargement." : "Failed to load. Check connection."}
+              </Text>
               <Pressable
                 onPress={() => fetchWilayas()}
-                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#111" }}
+                android_ripple={{ color: withAlpha("#fff", 0.15) }}
+                style={({ pressed }) => [
+                  {
+                    paddingHorizontal: S.lg,
+                    paddingVertical: S.sm,
+                    borderRadius: R.lg,
+                    backgroundColor: T.colors.primary,
+                    ...shadow(1),
+                  },
+                  pressableStyles(pressed),
+                ]}
               >
-                <Text style={{ color: "#fff", fontWeight: "600" }}>
+                <Text style={{ color: T.text.onPrimary, fontWeight: "700" }}>
                   {lang === "fr" ? "Réessayer" : "Retry"}
                 </Text>
               </Pressable>
@@ -279,7 +308,9 @@ export default function WilayaPicker({
               ref={listRef}
               data={listData}
               keyExtractor={(item) => String(item.id ?? "all")}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#f0f0f0" }} />}
+              ItemSeparatorComponent={() => (
+                <View style={{ height: 1, backgroundColor: T.border.subtle }} />
+              )}
               getItemLayout={(_, index) => ({ length: 48, offset: 48 * index, index })}
               initialNumToRender={20}
               renderItem={({ item }) => {
@@ -287,19 +318,33 @@ export default function WilayaPicker({
                 return (
                   <Pressable
                     onPress={() => chooseWilaya(item.id as ID | undefined)}
-                    style={{
-                      paddingVertical: 12,
-                      paddingHorizontal: 4,
-                      backgroundColor: selected ? "#F2F8FF" : "transparent",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
+                    android_ripple={{ color: T.state.ripple }}
+                    style={({ pressed }) => [
+                      {
+                        paddingVertical: 12,
+                        paddingHorizontal: 4,
+                        backgroundColor: selected ? withAlpha(T.colors.primary, 0.08) : "transparent",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        borderRadius: R.md,
+                      },
+                      pressableStyles(pressed),
+                    ]}
                   >
-                    <Text style={{ fontSize: 16, fontWeight: selected ? ("700" as const) : ("400" as const) }}>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: selected ? (600 as const) : (400 as const),
+                        color: selected ? T.colors.primary : T.text.default,
+                      }}
+                      numberOfLines={1}
+                    >
                       {item.label}
                     </Text>
-                    {selected ? <Text style={{ fontSize: 16 }}>✓</Text> : null}
+                    {selected ? (
+                      <Text style={{ fontSize: 16, color: T.colors.primary }}>✓</Text>
+                    ) : null}
                   </Pressable>
                 );
               }}
@@ -308,6 +353,6 @@ export default function WilayaPicker({
           )}
         </View>
       </ActionSheet>
-    </View>
+    </>
   );
 }

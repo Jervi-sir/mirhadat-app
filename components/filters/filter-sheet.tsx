@@ -1,26 +1,21 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, Switch, Pressable, TextInput, ActivityIndicator } from "react-native";
-import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
-import api from "@/utils/axios-instance";
-import { ApiRoutes, buildRoute } from "@/utils/api";
+import ActionSheet, { ActionSheetRef, ScrollView } from "react-native-actions-sheet";
+import api from "@/utils/api/axios-instance";
+import { ApiRoutes, buildRoute } from "@/utils/api/api";
 import { ToiletFilters } from "@/zustand/discover-store";
+import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme";
 
 /* ----------------------------- Types ----------------------------- */
 type Lang = "en" | "fr" | "ar";
 
-type TaxonomyRow = {
-  code: string;
-  label: string;
-  icon?: string | null;
-};
-
+type TaxonomyRow = { code: string; label: string; icon?: string | null };
 type TaxonomyAllResp = {
   data: {
     categories?: TaxonomyRow[];
     access_methods?: TaxonomyRow[];
     amenities?: TaxonomyRow[];
     rules?: TaxonomyRow[];
-    // wilayas?: ...
   };
 };
 
@@ -74,7 +69,6 @@ function useTaxonomyAll({
     accessMethods: data?.access_methods ?? [],
     amenities: data?.amenities ?? [],
     rules: data?.rules ?? [],
-    refetchEnabled: (v: boolean) => {}, // kept simple; could expose a setter if you want open-on-demand fetching
   };
 }
 
@@ -96,14 +90,9 @@ export function FilterSheet({
   const [accessMethod, setAccessMethod] = useState<ToiletFilters["accessMethod"]>(initial.accessMethod);
   const [pricingModel, setPricingModel] = useState<ToiletFilters["pricingModel"]>(initial.pricingModel);
   const [minRating, setMinRating] = useState<number | undefined>(initial.minRating);
-
-  // CHANGE: keep amenities as string[] to match taxonomy chips cleanly
   const [amenities, setAmenities] = useState<string[]>(initial.amenities ?? []);
-
-  // Fallback text input buffer (used only if taxonomy fails)
   const [amenitiesText, setAmenitiesText] = useState<string>(initial.amenities?.join(",") || "");
 
-  // Fetch taxonomy once (on mount). If you prefer only when opening, you can add a flag you set in onOpen.
   const { loading, err, accessMethods, amenities: amenityOptions } = useTaxonomyAll({
     taxonomyUrl,
     lang,
@@ -121,11 +110,7 @@ export function FilterSheet({
 
   const apply = () => {
     const finalAmenities = err
-      ? // if taxonomy failed, use the text input
-        amenitiesText
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
+      ? amenitiesText.split(",").map((s) => s.trim()).filter(Boolean)
       : amenities;
 
     onApply({
@@ -138,7 +123,6 @@ export function FilterSheet({
     sheetRef.current?.hide();
   };
 
-  // Map taxonomy objects to chip options
   const accessMethodOptions = useMemo(
     () => accessMethods.map((r) => ({ code: r.code, label: r.label })),
     [accessMethods]
@@ -154,38 +138,49 @@ export function FilterSheet({
       ref={sheetRef}
       gestureEnabled
       closeOnTouchBackdrop
-      drawUnderStatusBar
       defaultOverlayOpacity={0.3}
-      containerStyle={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
-      indicatorStyle={{ width: 60, height: 5, borderRadius: 3, backgroundColor: "#111" }}
-      safeAreaInsets={{
-        top: 100, bottom: 0, left: 0, right: 0
+      containerStyle={{
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        backgroundColor: T.bg.surface,
+        borderTopWidth: 1,
+        borderColor: T.border.subtle,
       }}
+      indicatorStyle={{
+        width: 60,
+        height: 5,
+        borderRadius: 3,
+        backgroundColor: withAlpha(T.text.default, 0.2),
+      }}
+      safeAreaInsets={{ top: 100, bottom: 0, left: 0, right: 0 }}
     >
-      <View style={{ padding: 16, gap: 12 }}>
-        <Text style={{ fontSize: 18, fontWeight: "700" }}>
-          {lang === "fr" ? "Filtres" : lang === "ar" ? "تصفية" : "Filters"}
-        </Text>
+      <ScrollView>
 
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text>{lang === "fr" ? "Gratuit uniquement" : lang === "ar" ? "مجاني فقط" : "Free only"}</Text>
-          <Switch 
-            value={!!isFree} onValueChange={(v) => setIsFree(v)} 
-            thumbColor={'#43a047'}
-          />
-        </View>
-
-        <View>
-          <Text style={{ marginBottom: 6 }}>
-            {lang === "fr" ? "Méthode d’accès" : lang === "ar" ? "طريقة الوصول" : "Access method"}
+        <View style={{ padding: S.lg, gap: S.md }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: T.text.default }}>
+            {lang === "fr" ? "Filtres" : lang === "ar" ? "تصفية" : "Filters"}
           </Text>
 
+          {/* Free only */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: S.xs }}>
+            <Text style={{ color: T.text.strong }}>
+              {lang === "fr" ? "Gratuit uniquement" : lang === "ar" ? "مجاني فقط" : "Free only"}
+            </Text>
+            <Switch
+              value={!!isFree}
+              onValueChange={(v) => setIsFree(v)}
+              trackColor={{ false: withAlpha(T.text.default, 0.2), true: withAlpha(T.colors.primary, 0.45) }}
+              thumbColor={!!isFree ? T.colors.primary : "#f4f3f4"}
+            />
+          </View>
+
+          {/* Access method */}
+          <SectionLabel text={lang === "fr" ? "Méthode d’accès" : lang === "ar" ? "طريقة الوصول" : "Access method"} />
           {loading ? (
-            <View style={{ paddingVertical: 10 }}>
-              <ActivityIndicator />
+            <View style={{ paddingVertical: S.sm }}>
+              <ActivityIndicator color={T.colors.primary} />
             </View>
           ) : err ? (
-            // Fallback to your old static list if API failed
             <RowChips
               options={[
                 { code: "public", label: "Public" },
@@ -206,13 +201,9 @@ export function FilterSheet({
               allowUnset
             />
           )}
-        </View>
 
-        <View>
-          <Text style={{ marginBottom: 6 }}>
-            {lang === "fr" ? "Modèle de tarification" : lang === "ar" ? "نموذج التسعير" : "Pricing model"}
-          </Text>
-          {/* Pricing model isn't in taxonomy; keep your static list */}
+          {/* Pricing model */}
+          <SectionLabel text={lang === "fr" ? "Modèle de tarification" : lang === "ar" ? "نموذج التسعير" : "Pricing model"} />
           <RowChips
             options={[
               { code: "flat", label: "Flat" },
@@ -224,48 +215,46 @@ export function FilterSheet({
             onChange={(v) => setPricingModel((v as any) ?? null)}
             allowUnset
           />
-        </View>
 
-        <View>
-          <Text style={{ marginBottom: 6 }}>
-            {lang === "fr" ? "Note minimale (0–5)" : lang === "ar" ? "أدنى تقييم (0–5)" : "Min rating (0–5)"}
-          </Text>
+          {/* Min rating */}
+          <SectionLabel text={lang === "fr" ? "Note minimale (0–5)" : lang === "ar" ? "أدنى تقييم (0–5)" : "Min rating (0–5)"} />
           <TextInput
             keyboardType="numeric"
             placeholder="e.g. 3.5"
+            placeholderTextColor={T.text.tertiary}
             value={minRating != null ? String(minRating) : ""}
             onChangeText={(t) => setMinRating(t ? Number(t) : undefined)}
             style={{
               borderWidth: 1,
-              borderColor: "#ddd",
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 8,
+              borderColor: T.border.subtle,
+              borderRadius: R.lg,
+              paddingHorizontal: S.lg,
+              paddingVertical: 10,
+              backgroundColor: T.bg.surface,
+              color: T.text.default,
             }}
           />
-        </View>
 
-        <View>
-          <Text style={{ marginBottom: 6 }}>
-            {lang === "fr" ? "Équipements" : lang === "ar" ? "التجهيزات" : "Amenities"}
-          </Text>
-
+          {/* Amenities */}
+          <SectionLabel text={lang === "fr" ? "Équipements" : lang === "ar" ? "التجهيزات" : "Amenities"} />
           {loading ? (
-            <View style={{ paddingVertical: 10 }}>
-              <ActivityIndicator />
+            <View style={{ paddingVertical: S.sm }}>
+              <ActivityIndicator color={T.colors.primary} />
             </View>
           ) : err ? (
-            // Fallback to your old text input if taxonomy failed
             <TextInput
               placeholder="paper, soap, bidet"
+              placeholderTextColor={T.text.tertiary}
               value={amenitiesText}
               onChangeText={setAmenitiesText}
               style={{
                 borderWidth: 1,
-                borderColor: "#ddd",
-                borderRadius: 10,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
+                borderColor: T.border.subtle,
+                borderRadius: R.lg,
+                paddingHorizontal: S.lg,
+                paddingVertical: 10,
+                backgroundColor: T.bg.surface,
+                color: T.text.default,
               }}
             />
           ) : (
@@ -273,34 +262,43 @@ export function FilterSheet({
               options={amenityChipOptions}
               values={amenities}
               onToggle={(code, active) =>
-                setAmenities((prev) =>
-                  active ? [...prev, code] : prev.filter((c) => c !== code)
-                )
+                setAmenities((prev) => (active ? [...prev, code] : prev.filter((c) => c !== code)))
               }
             />
           )}
-        </View>
 
-        <Pressable
-          onPress={apply}
-          style={{
-            backgroundColor: "#111",
-            paddingVertical: 12,
-            borderRadius: 12,
-            alignItems: "center",
-            marginTop: 6,
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>
-            {lang === "fr" ? "Appliquer" : lang === "ar" ? "تطبيق" : "Apply"}
-          </Text>
-        </Pressable>
-      </View>
+          {/* Apply */}
+          <Pressable
+            onPress={apply}
+            android_ripple={{ color: withAlpha("#fff", 0.2) }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: T.colors.primary,
+                paddingVertical: 12,
+                borderRadius: R.xl,
+                alignItems: "center",
+                marginTop: S.sm,
+                ...shadow(1),
+              },
+              pressableStyles(pressed),
+            ]}
+          >
+            <Text style={{ color: T.text.onPrimary, fontWeight: "800" }}>
+              {lang === "fr" ? "Appliquer" : lang === "ar" ? "تطبيق" : "Apply"}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+
     </ActionSheet>
   );
 }
 
-/* ----------------------------- Chips ----------------------------- */
+/* ----------------------------- Subcomponents ----------------------------- */
+
+function SectionLabel({ text }: { text: string }) {
+  return <Text style={{ marginBottom: 6, color: T.text.strong, fontWeight: "700" }}>{text}</Text>;
+}
 
 function RowChips({
   options,
@@ -314,41 +312,47 @@ function RowChips({
   allowUnset?: boolean;
 }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: S.sm }}>
       {options.map((opt) => {
         const active = value === opt.code;
         return (
           <Pressable
             key={opt.code}
             onPress={() => onChange(active && allowUnset ? undefined : opt.code)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: active ? "#111" : "#ccc",
-              backgroundColor: active ? "#111" : "#fff",
-            }}
+            android_ripple={{ color: T.state.ripple }}
+            style={({ pressed }) => [
+              {
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: R.pill,
+                borderWidth: 1,
+                borderColor: active ? withAlpha(T.colors.primary, 0.7) : T.border.subtle,
+                backgroundColor: active ? withAlpha(T.colors.primary, 0.12) : T.bg.surface,
+              },
+              pressableStyles(pressed),
+            ]}
           >
-            <Text style={{ color: active ? "#fff" : "#111" }}>{opt.label}</Text>
+            <Text style={{ color: active ? T.colors.primary : T.text.strong, fontWeight: "700" }}>{opt.label}</Text>
           </Pressable>
         );
       })}
       {allowUnset && (
         <Pressable
           onPress={() => onChange(undefined)}
-          style={{
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: value ? "#ccc" : "#111",
-            backgroundColor: value ? "#fff" : "#111",
-          }}
+          android_ripple={{ color: T.state.ripple }}
+          style={({ pressed }) => [
+            {
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: R.pill,
+              borderWidth: 1,
+              borderColor: value ? T.border.subtle : withAlpha(T.colors.primary, 0.7),
+              backgroundColor: value ? T.bg.surface : withAlpha(T.colors.primary, 0.12),
+            },
+            pressableStyles(pressed),
+          ]}
         >
-          <Text style={{ color: value ? "#111" : "#fff" }}>
-            Any
-          </Text>
+          <Text style={{ color: value ? T.text.strong : T.colors.primary, fontWeight: "700" }}>Any</Text>
         </Pressable>
       )}
     </View>
@@ -365,23 +369,27 @@ function MultiChips({
   onToggle: (code: string, nextActive: boolean) => void;
 }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: S.sm }}>
       {options.map((opt) => {
         const active = values.includes(opt.code);
         return (
           <Pressable
             key={opt.code}
             onPress={() => onToggle(opt.code, !active)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: active ? "#111" : "#ccc",
-              backgroundColor: active ? "#111" : "#fff",
-            }}
+            android_ripple={{ color: T.state.ripple }}
+            style={({ pressed }) => [
+              {
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: R.pill,
+                borderWidth: 1,
+                borderColor: active ? withAlpha(T.colors.primary, 0.7) : T.border.subtle,
+                backgroundColor: active ? withAlpha(T.colors.primary, 0.12) : T.bg.surface,
+              },
+              pressableStyles(pressed),
+            ]}
           >
-            <Text style={{ color: active ? "#fff" : "#111" }}>{opt.label}</Text>
+            <Text style={{ color: active ? T.colors.primary : T.text.strong, fontWeight: "700" }}>{opt.label}</Text>
           </Pressable>
         );
       })}

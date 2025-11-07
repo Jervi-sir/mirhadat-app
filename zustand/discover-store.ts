@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import api, { apiPublic } from "@/utils/axios-instance";
+import api from "@/utils/api/axios-instance";
 import axios, { AxiosError } from "axios";
 import type { WilayaType, ToiletWithRelationsType } from "@/utils/types";
-import { ApiRoutes, buildRoute } from "@/utils/api";
+import { ApiRoutes, buildRoute } from "@/utils/api/api";
 
 /* ============================ Request Types ============================ */
 export type DiscoverParams = {
@@ -32,7 +32,8 @@ type DiscoverResponse = {
 
 /* ============================ Local Request Helper ============================ */
 async function fetchDiscover(params: DiscoverParams, opts?: { signal?: AbortSignal }) {
-  const res = await apiPublic.get<DiscoverResponse>('/toilets', {
+  const res = await api.get<DiscoverResponse>('/toilets', {
+    authIfAvailable: true,
     params,
     signal: opts?.signal, // AbortController support
   });

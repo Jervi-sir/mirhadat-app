@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import axios, { AxiosError } from "axios";
-import { apiPublic } from "@/utils/axios-instance";
-import { ApiRoutes, buildRoute } from "@/utils/api";
+import { ApiRoutes, buildRoute } from "@/utils/api/api";
 import type { WilayaType, ToiletMarkerType } from "@/utils/types";
+import api from "@/utils/api/axios-instance";
 
 /* ============================ Request Types ============================ */
 export type MapDiscoverParams = {
@@ -114,7 +114,8 @@ function mergeById<T extends { id: number | string }>(prev: T[], next: T[]) {
 
 /* ============================ Local request helper ============================ */
 async function fetchMarkers(params: MapDiscoverParams, opts?: { signal?: AbortSignal }) {
-  const res = await apiPublic.get<MarkerIndexResponse>('/toilets-markers', {
+  const res = await api.get<MarkerIndexResponse>('/toilets-markers', {
+    authRequired: true,
     params,
     signal: opts?.signal,
   });

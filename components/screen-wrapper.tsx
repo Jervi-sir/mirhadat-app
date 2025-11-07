@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { FloatingButton } from './floating-button';
+import { theme } from '@/ui/theme';
 
 type Props = {
   children: React.ReactNode;
@@ -39,6 +40,9 @@ type Props = {
 
   /** Add slight rotation sway (degrees). Default 2 */
   backgroundAnimationRotateDeg?: number;
+
+  // with floating
+  withFloatingButton?: boolean
 };
 
 const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
@@ -53,11 +57,12 @@ export const ScreenWrapper: React.FC<Props> = ({
   backgroundImage,
   backgroundResizeMode = 'cover',
   backgroundOverlayColor,
-  backgroundFallbackColor = '#111523',
+  backgroundFallbackColor = theme.bg.app,
   animateBackground = false,
   backgroundAnimationRadius = 12,
   backgroundAnimationSpeedMs = 42000,
   backgroundAnimationRotateDeg = 0,
+  withFloatingButton = false
 }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = Dimensions.get('window');
@@ -81,7 +86,10 @@ export const ScreenWrapper: React.FC<Props> = ({
   const Body = (
     <View
       style={[
-        { flex: 1, backgroundColor: bodyBaseBg, paddingTop: disableTopInset ? 10 : insets.top },
+        { 
+          flex: 1, backgroundColor: theme.bg.app, //bodyBaseBg, 
+          paddingTop: disableTopInset ? 10 : insets.top 
+        },
         style,
       ]}
     >
@@ -99,7 +107,9 @@ export const ScreenWrapper: React.FC<Props> = ({
 
   if (!backgroundImage) return (
     <>
-      <FloatingButton />
+      {withFloatingButton
+        && <FloatingButton />
+      }
       {Content}
     </>
   );
@@ -115,7 +125,9 @@ export const ScreenWrapper: React.FC<Props> = ({
           <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: backgroundOverlayColor }} />
         ) : null}
 
-        <FloatingButton />
+        {withFloatingButton
+          && <FloatingButton />
+        }
         {Content}
       </ImageBackground>
     );
@@ -195,7 +207,9 @@ export const ScreenWrapper: React.FC<Props> = ({
         ) : null}
       </AnimatedImageBackground>
 
-      <FloatingButton />
+      {withFloatingButton
+        && <FloatingButton />
+      }
 
       {Content}
     </View>

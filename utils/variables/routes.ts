@@ -18,5 +18,8 @@ export const Routes = {
   MapScreen: 'MapScreen',
   ToiletOfferScreen: 'ToiletOfferScreen',
   DiscoverMapScreen: 'DiscoverMapScreen',
-  
+  ToiletFormScreen: 'ToiletFormScreen',
+  HostDashboardScreen: 'HostDashboardScreen',
+  MapPickerScreen: 'MapPickerScreen',
+  EditProfileScreen: 'EditProfileScreen',
 } 

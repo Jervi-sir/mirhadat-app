@@ -20,14 +20,15 @@ export type FiltersType = {
 export interface RoleType {
   id: id;
   code: string;
-  created_at: ISODateTimeType;
-  updated_at: ISODateTimeType;
 }
 
 export interface UserType {
   id: id;
   name: string;
-  email: string;
+  phone: string;
+  email?: string | null;
+  role_code?: string | null;
+  role?: RoleType | null;
   created_at: ISODateTimeType;
   updated_at: ISODateTimeType;
 }
@@ -177,11 +178,11 @@ export interface ToiletReportType {
 
 /* ---------- RELATIONAL VIEWS ---------- */
 export interface ToiletWithRelationsType extends ToiletType {
-  category?: ToiletCategoryType;
-  wilaya?: WilayaType;
-  owner?: Pick<UserType, "id" | "name"> | null;
-  photos?: ToiletPhotoType[];
-  open_hours?: ToiletOpenHourType[];
+  category?: ToiletCategoryType | null;
+  wilaya?: WilayaType | null;
+  owner?: UserType | null;
+  photos?: ToiletPhotoType[] | [];
+  open_hours?: ToiletOpenHourType[] | [];
   is_favorite?: boolean;
 }
 

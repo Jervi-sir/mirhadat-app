@@ -1,16 +1,11 @@
-import {
-  ISODateTimeType,
-  ToiletCategoryType,
-  ToiletWithRelationsType,
-  UserType,
-  WilayaType,
-  PricingModelType,
-} from "@/utils/types";
+import { ToiletWithRelationsType } from "@/utils/types";
 import React, { useMemo } from "react";
-import { View, Text, Pressable } from "react-native";
-import { Image } from 'expo-image';
+import { View, Text, Pressable, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Routes } from "@/utils/variables/routes";
+import { theme as T, S, R, shadow, withAlpha, pressableStyles, C } from "@/ui/theme";
+import { Divider } from "@/ui/divider";
+import { makeFakeToilet } from "@/utils/fake-data/toilet-card-data";
 
 export function ToiletCard({
   item,
@@ -20,16 +15,16 @@ export function ToiletCard({
   onPress?: () => void;
 }) {
   const data = useMemo<ToiletWithRelationsType>(() => item ?? makeFakeToilet(), [item]);
-const navigation: any = useNavigation();
+  const navigation: any = useNavigation();
+
   const categoryLabel =
     data.category?.en || data.category?.fr || data.category?.ar || "—";
 
-  const priceText =
-    data.is_free
-      ? "Free"
-      : data.price_cents != null
-        ? `${(data.price_cents / 100).toFixed(0)} DZD`
-        : "—";
+  const priceText = data.is_free
+    ? "Free"
+    : data.price_cents != null
+      ? `${(data.price_cents / 100).toFixed(0)} DZD`
+      : "—";
 
   const pricingModelText =
     data.pricing_model === "per-visit"
@@ -43,146 +38,115 @@ const navigation: any = useNavigation();
             : "";
 
   const amenitiesPreview = (data.amenities ?? []).slice(0, 4).join(", ");
-  const hasMoreAmenities =
-    (data.amenities?.length ?? 0) > 4 ? "…" : "";
+  const hasMoreAmenities = (data.amenities?.length ?? 0) > 4 ? "…" : "";
+
+  const coverUri =
+    typeof data?.cover_photo === "string"
+      ? data.cover_photo
+      : typeof (data as any)?.cover_photo?.url === "string"
+        ? (data as any).cover_photo.url
+        : undefined;
 
   return (
     <Pressable
       onPress={() => {
-        if(onPress) onPress();
-        else {
-          navigation.navigate(Routes.ToiletOfferScreen, { toiletId: item?.id })
-        }
+        if (onPress) onPress();
+        else navigation.navigate(Routes.ToiletOfferScreen, { toiletId: item?.id });
       }}
-      style={{
-        backgroundColor: "#fff",
-        padding: 12,
-        borderRadius: 12,
-        marginVertical: 6,
-        shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-        flexDirection: 'row',  gap: 8
-      }}
+      android_ripple={{ color: T.state.ripple }}
+      style={({ pressed }) => [
+        {
+          backgroundColor: T.bg.surface,
+          borderRadius: R.xl,
+          overflow: 'hidden',
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: T.border.subtle,
+          ...shadow(1),
+        },
+        pressableStyles(pressed),
+      ]}
     >
-      <View style={{ width: 76, height: 76, backgroundColor: '#111', overflow: "hidden", borderRadius: 8 }}>
-        {data.cover_photo
-          && <Image
-            source={{ uri: data.cover_photo }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-        }
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 16, fontWeight: "600" }}>{data.name}</Text>
-          <Text style={{ fontSize: 12, opacity: 0.7 }}>
-            {(data.avg_rating ?? 0).toFixed(1)} ★
-          </Text>
+      <View style={{
+        flexDirection: "row",
+        alignItems: 'center',
+        gap: S.md,
+        padding: S.md,
+      }}>
+        {/* Cover */}
+        <View
+          style={{
+            width: 69,
+            height: 69,
+            backgroundColor: T.bg.primaryTint,
+            overflow: "hidden",
+            borderRadius: R.md,
+            borderWidth: 1,
+            borderColor: withAlpha(T.text.default, 0.06),
+          }}
+        >
+          {coverUri && (
+            <Image source={{ uri: coverUri }} style={{ width: 69, height: 69 }} resizeMode="cover" />
+          )}
         </View>
+        {/* Content */}
+        <View style={{ flex: 1 }}>
+          {/* Title + rating */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: S.sm }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: T.text.default }} numberOfLines={1}>
+              {data.name}
+            </Text>
 
-        <Text style={{ fontSize: 13, marginTop: 4, color: "#555" }}>
+          </View>
+
+
+          {/* Address */}
+          <Text numberOfLines={1} style={{ fontSize: 12, marginTop: 4, color: T.text.tertiary }}>
+            {data.address_line}
+          </Text>
+
+          {/* Amenities */}
+          {Boolean(data.amenities?.length) && (
+            <Text style={{ fontSize: 11, marginTop: 6, color: T.text.secondary }}>
+              Amenities: {amenitiesPreview}
+              {hasMoreAmenities}
+            </Text>
+          )}
+        </View>
+      </View>
+      <Divider />
+      <View style={{
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        paddingHorizontal: S.md,
+        paddingVertical: S.sm,
+        backgroundColor: 'rgba(0,123,122,0.1)'
+      }}>
+        {/* Category + price */}
+        <Text style={{ ...T.typography.label , color: T.text.default }}>
           {categoryLabel}
           {" · "}
           {priceText}
           {pricingModelText ? ` (${pricingModelText})` : ""}
         </Text>
-
-        <Text
-          numberOfLines={1}
-          style={{ fontSize: 12, marginTop: 4, color: "#777" }}
+        {/* Rating pill */}
+        <View
+          style={{
+            backgroundColor: withAlpha("#F59E0B", 0.12),
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: R.pill,
+            borderWidth: 1,
+            borderColor: withAlpha("#F59E0B", 0.2),
+            minWidth: 44,
+            alignItems: "center",
+          }}
         >
-          {data.address_line}
-        </Text>
-
-        {Boolean(data.amenities?.length) && (
-          <Text style={{ fontSize: 11, marginTop: 6, color: "#888" }}>
-            Amenities: {amenitiesPreview}
-            {hasMoreAmenities}
+          <Text style={{ fontSize: 12, color: "#F59E0B", fontWeight: "700" }}>
+            {(data.avg_rating ?? 0).toFixed(1)} ★
           </Text>
-        )}
+        </View>
       </View>
+
     </Pressable>
   );
-}
-
-/* ---------- Helper & Fake Data ---------- */
-function nowISO(): ISODateTimeType {
-  return new Date().toISOString() as ISODateTimeType;
-}
-
-function makeFakeToilet(): ToiletWithRelationsType {
-  const created = nowISO();
-  const updated = created;
-
-  const fakeCategory: ToiletCategoryType = {
-    id: 1,
-    code: "cafeteria",
-    icon: "mdi:cup",
-    en: "Cafeteria",
-    fr: "Cafétéria",
-    ar: "مقهى",
-    created_at: created,
-    updated_at: updated,
-  };
-
-  const fakeWilaya: WilayaType = {
-    id: 16,
-    code: "DZ-16",
-    number: 16,
-    en: "Algiers",
-    fr: "Alger",
-    ar: "الجزائر",
-    created_at: created,
-    updated_at: updated,
-  };
-
-  const fakeOwner: Pick<UserType, "id" | "name"> = { id: 42, name: "Octa Place" };
-
-  return {
-    id: 1001,
-    owner_id: 42,
-    toilet_category_id: fakeCategory.id,
-
-    name: "Octa Mall — Level 2",
-    description:
-      "Clean facilities near the food court. Staff checks every hour.",
-    phone_numbers: ["0550 000 000"],
-
-    lat: 36.7525,
-    lng: 3.04197,
-
-    address_line: "Centre Commercial Octa Mall, Alger",
-    wilaya_id: fakeWilaya.id,
-    place_hint: "By the escalators, next to Kiosque Z",
-
-    access_method: "public",
-    capacity: 4,
-    is_unisex: true,
-
-    amenities: ["paper", "soap", "water", "bidet"],
-    rules: ["no_smoking", "for_customers_only"],
-
-    is_free: false,
-    price_cents: 50,
-    pricing_model: "per-visit" as PricingModelType,
-
-    status: "active",
-    avg_rating: 4.3,
-    reviews_count: 128,
-    photos_count: 6,
-
-    created_at: created,
-    updated_at: updated,
-
-    category: fakeCategory,
-    wilaya: fakeWilaya,
-    owner: fakeOwner,
-    photos: [],
-    open_hours: [],
-    is_favorite: false,
-  };
 }

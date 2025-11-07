@@ -258,7 +258,7 @@ const Tools = ({ isOpen, animation }: { isOpen: boolean; animation: any }) => {
       zIndex: 2,
     },
     {
-      route: Routes.LoginScreen, // change to your actual route
+      route: Routes.HostDashboardScreen, // change to your actual route
       icon: UserIcon,
       style: makeItemStyle(baseOffset(1)),
       zIndex: 1,
@@ -273,6 +273,7 @@ const Tools = ({ isOpen, animation }: { isOpen: boolean; animation: any }) => {
           <TouchableOpacity
             key={route}
             activeOpacity={0.8}
+            // @ts-ignore
             pointerEvents={isOpen ? "auto" : "none"}
             onPress={() => navigateSmart(route)}
           >

@@ -1,5 +1,5 @@
 // ToiletMapScreen.tsx
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Platform, Pressable, Text, View } from "react-native";
 import MapView, { Circle, Marker, Region } from "react-native-maps";
 import { ScreenWrapper } from "@/components/screen-wrapper";
@@ -12,6 +12,7 @@ import type { WilayaType, ToiletMarkerType } from "@/utils/types";
 import { DEFAULT_CENTER, kmToLatDelta, kmToLngDelta, makeRegion } from "@/utils/geo";
 import { ArrowLeft } from "lucide-react-native";
 import { NearbyToiletsSheet, NearbyToiletsSheetRef } from "./nearby-toilets-action-sheet";
+import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
@@ -23,11 +24,10 @@ const zoomForLongitudeDelta = (lonDelta: number) => {
 };
 const QUERY_DEBOUNCE_MS = 350;
 
-export default function ToiletMapScreen() {
+export default function DiscoverMapScreen() {
   const navigation: any = useNavigation();
   const mapRef = useRef<MapView>(null);
   const filterRef = useRef<any>(null);
-
   const nearbySheetRef = useRef<NearbyToiletsSheetRef>(null);
 
   const {
@@ -74,8 +74,8 @@ export default function ToiletMapScreen() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (fetchFirstDebounced) fetchFirstDebounced().catch(() => { });
-      else if (fetchFirst) fetchFirst().catch(() => { });
+      if (fetchFirstDebounced) fetchFirstDebounced().catch(() => {});
+      else if (fetchFirst) fetchFirst().catch(() => {});
     }, QUERY_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [fetchFirstDebounced, fetchFirst, selectedWilaya?.id, filtersKey, centerKey]);
@@ -168,8 +168,8 @@ export default function ToiletMapScreen() {
     [region.latitude, region.longitude, safeRadiusKm].every(Number.isFinite) && safeRadiusKm > 0;
 
   return (
-    <ScreenWrapper>
-      <View style={{ flex: 1 }}>
+    <>
+      <View style={{ flex: 1, backgroundColor: T.bg.app }}>
         <MapView
           ref={mapRef}
           style={{ flex: 1 }}
@@ -184,8 +184,8 @@ export default function ToiletMapScreen() {
             <Circle
               center={{ latitude: region.latitude, longitude: region.longitude }}
               radius={safeRadiusKm * 1000}
-              strokeColor="rgba(37,99,235,0.4)"
-              fillColor="rgba(37,99,235,0.06)"
+              strokeColor={withAlpha(T.colors.primary, 0.5)}
+              fillColor={withAlpha(T.colors.primary, 0.10)}
               strokeWidth={2}
             />
           )}
@@ -194,11 +194,10 @@ export default function ToiletMapScreen() {
             <Marker
               key={m.id}
               coordinate={{ latitude: m.lat as number, longitude: m.lng as number }}
-              pinColor={m.is_free ? "#14b84a" : "#2563eb"}
+              // success for free, primary for paid
+              pinColor={m.is_free ? T.colors.success : T.colors.primary}
               onPress={() => {
-                // keep store center aligned for your markers fetch loop
                 if ([m.lat, m.lng].every(Number.isFinite)) {
-                  // optional: nudge camera a bit (not required)
                   try {
                     if (mapRef.current) {
                       if (Platform.OS === "android") {
@@ -210,9 +209,8 @@ export default function ToiletMapScreen() {
                         mapRef.current.animateToRegion({ ...region, latitude: m.lat as number, longitude: m.lng as number }, 400);
                       }
                     }
-                  } catch { }
+                  } catch {}
                 }
-                // OPEN the separate sheet using index API
                 nearbySheetRef.current?.openAt(m.lat as number, m.lng as number);
               }}
               tracksViewChanges={Platform.OS === "android"}
@@ -221,65 +219,80 @@ export default function ToiletMapScreen() {
         </MapView>
 
         {/* Top overlay */}
-        <View pointerEvents="box-none" style={{ position: "absolute", top: 16, left: 12, right: 12, gap: 8 }}>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable
+        <View pointerEvents="box-none" style={{ position: "absolute", top: 44, left: S.md, right: S.md, gap: S.sm }}>
+          <View style={{ flexDirection: "row", alignItems: 'center', gap: S.sm }}>
+            {/* Back */}
+            {/* <Pressable
               onPress={() => navigation.goBack()}
-              style={{
-                backgroundColor: "#fff",
-                paddingHorizontal: 12,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#eee",
-                elevation: 2,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
+              android_ripple={{ color: T.state.ripple }}
+              style={({ pressed }) => [
+                {
+                  height: 44,
+                  backgroundColor: T.bg.surface,
+                  paddingHorizontal: S.lg,
+                  borderRadius: R.lg,
+                  borderWidth: 1,
+                  borderColor: T.border.subtle,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  ...shadow(1),
+                },
+                pressableStyles(pressed),
+              ]}
             >
-              <Text style={{ fontWeight: "700" }}>
-                <ArrowLeft size={22} />{" "}
-              </Text>
-            </Pressable>
+              <ArrowLeft size={20} color={T.text.strong as string} />
+            </Pressable> */}
 
+            {/* Wilaya */}
             <WilayaPicker
               value={selectedWilaya}
               onChangeWilaya={onWilayaChange}
               includeAll={false}
               triggerStyle={{
-                backgroundColor: "#fff",
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 12,
+                height: 44,
+                backgroundColor: T.bg.surface,
+                paddingHorizontal: S.lg,
+                borderRadius: R.lg,
                 borderWidth: 1,
-                borderColor: "#eee",
-                elevation: 2,
+                borderColor: T.border.subtle,
+                ...shadow(1),
               }}
-              triggerTextStyle={{ fontWeight: "700" }}
+              triggerTextStyle={{ fontWeight: "800", color: T.text.strong }}
               scope="with_toilets"
               status="active"
               withCounts
               lang="fr"
             />
 
+            {/* Filters */}
             <Pressable
               onPress={() => filterRef.current?.show()}
-              style={{
-                marginLeft: "auto",
-                backgroundColor: "#fff",
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#eee",
-                elevation: 2,
-              }}
+              android_ripple={{ color: T.state.ripple }}
+              style={({ pressed }) => [
+                {
+                  height: 44,
+                  marginLeft: "auto",
+                  justifyContent: 'center',
+                  backgroundColor: T.bg.surface,
+                  paddingHorizontal: S.lg,
+                  paddingVertical: 10,
+                  borderRadius: R.lg,
+                  borderWidth: 1,
+                  borderColor: T.border.subtle,
+                  ...shadow(1),
+                },
+                pressableStyles(pressed),
+              ]}
             >
-              <Text style={{ fontWeight: "700" }}>Filters {markers.length} </Text>
+              <Text style={{ fontWeight: "800", color: T.text.strong }}>
+                Filters 
+                {/* {markers.length} */}
+              </Text>
             </Pressable>
           </View>
         </View>
 
-        {/* Loading HUD for markers */}
+        {/* Loading HUD */}
         {loading && (
           <View
             pointerEvents="none"
@@ -287,25 +300,26 @@ export default function ToiletMapScreen() {
               position: "absolute",
               top: 80,
               alignSelf: "center",
-              backgroundColor: "rgba(255,255,255,0.9)",
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 999,
+              backgroundColor: withAlpha("#fff", 0.92),
+              paddingHorizontal: S.lg,
+              paddingVertical: S.sm,
+              borderRadius: R.pill,
               borderWidth: 1,
-              borderColor: "#eee",
+              borderColor: T.border.subtle,
+              ...shadow(1),
             }}
           >
-            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-              <ActivityIndicator />
-              <Text>Loading toilets…</Text>
+            <View style={{ flexDirection: "row", gap: S.sm, alignItems: "center" }}>
+              <ActivityIndicator color={T.colors.primary} />
+              <Text style={{ color: T.text.strong }}>Loading toilets…</Text>
             </View>
           </View>
         )}
 
-        {/* Filters sheet (unchanged) */}
+        {/* Filters sheet */}
         <FilterSheet sheetRef={filterRef} initial={filters as any} onApply={(f) => setFilters(f)} />
 
-        {/* NEW: Nearby list sheet (self-contained API) */}
+        {/* Nearby list sheet */}
         <NearbyToiletsSheet
           ref={nearbySheetRef}
           wilayaId={selectedWilaya?.id}
@@ -313,7 +327,6 @@ export default function ToiletMapScreen() {
           filters={filters}
         />
       </View>
-    </ScreenWrapper>
+    </>
   );
 }
-

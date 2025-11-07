@@ -1,6 +1,6 @@
 import { ToiletCard } from "@/components/card/toilet-card";
-import { ApiRoutes, buildRoute } from "@/utils/api";
-import { apiPublic } from "@/utils/axios-instance";
+import { ApiRoutes, buildRoute } from "@/utils/api/api";
+import api from "@/utils/api/axios-instance";
 import { FiltersType } from "@/utils/types";
 import { Routes } from "@/utils/variables/routes";
 import { useNavigation } from "@react-navigation/native";
@@ -74,7 +74,7 @@ export const NearbyToiletsSheet = forwardRef<NearbyToiletsSheetRef, { wilayaId?:
     if (!anchor) return { rows: [], meta: {} as any };
 
     const params = buildParams(anchor.lat, anchor.lng, p);
-    const resp = await apiPublic.get(buildRoute(ApiRoutes.toilets.index), { params });
+    const resp = await api.get(buildRoute(ApiRoutes.toilets.index), { authIfAvailable: true, params });
     const rows = resp.data?.data ?? [];
     const meta = resp.data?.meta ?? {};
     return { rows, meta };
