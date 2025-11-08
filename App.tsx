@@ -43,8 +43,11 @@ function Navigation() {
       initialRouteName={Routes.BootScreen}
     >
       <Stack.Screen name={Routes.BootScreen} component={BootScreen as any} />
-
-      <Stack.Screen name={Routes.NavigationScreen} component={NavigationScreen as any} />
+      <Stack.Screen
+        name={Routes.NavigationScreen}
+        component={NavigationScreen as any}
+        options={{ animationEnabled: false }}
+      />
       <Stack.Screen name={Routes.DiscoverScreen} component={DiscoverScreen as any} />
       <Stack.Screen name={Routes.ToiletOfferScreen} component={ToiletOfferScreen as any} />
       <Stack.Screen name={Routes.DiscoverMapScreen} component={DiscoverMapScreen as any} />

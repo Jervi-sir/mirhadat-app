@@ -93,7 +93,13 @@ export interface ToiletType {
   is_unisex: boolean;
 
   amenities: string[] | null;
+  amenities_meta: {
+    code?: string; icon?: string; en?: string; fr?: string; ar?: string; label?: string;
+  }[] | null;
   rules: string[] | null;
+  rules_meta: {
+    code?: string; icon?: string; en?: string; fr?: string; ar?: string; label?: string;
+  }[] | null;
 
   is_free: boolean;
   price_cents: number | null;
@@ -180,6 +186,12 @@ export interface ToiletReportType {
 export interface ToiletWithRelationsType extends ToiletType {
   category?: ToiletCategoryType | null;
   wilaya?: WilayaType | null;
+  wilaya_text?: { 
+    code?: string | null,
+    en?: string | null,
+    fr?: string | null,
+    ar?: string | null,
+  },
   owner?: UserType | null;
   photos?: ToiletPhotoType[] | [];
   open_hours?: ToiletOpenHourType[] | [];

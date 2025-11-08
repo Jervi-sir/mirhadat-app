@@ -1,9 +1,9 @@
-import { View, Text, Pressable, FlatList, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, FlatList, ActivityIndicator, RefreshControl } from "react-native";
 import { ScreenWrapper } from "@/components/screen-wrapper";
 import { Routes } from "@/utils/variables/routes";
 import WilayaPicker from "@/components/filters/wilaya-picker";
 import { ActionSheetRef } from "react-native-actions-sheet";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FilterSheet } from "@/components/filters/filter-sheet";
 import { ToiletCard } from "@/components/card/toilet-card";
 import { useDiscoverStore } from "@/zustand/discover-store";
@@ -19,6 +19,8 @@ export default function DiscoverScreen() {
     items, loading, hasMore, fetchFirst, fetchNext,
   } = useDiscoverStore();
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
     fetchFirst();
   }, [selectedWilaya?.id, JSON.stringify(filters)]);
@@ -27,6 +29,15 @@ export default function DiscoverScreen() {
 
   const onOpenDetails = (t: ToiletWithRelationsType) => {
     navigation.navigate(Routes.ToiletOfferScreen, { toiletId: t?.id });
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await fetchFirst(); // re-fetch first page with current filters/wilaya
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -49,30 +60,9 @@ export default function DiscoverScreen() {
             <View style={{ height: 34, justifyContent: 'center' }}>
               <Text style={{ fontSize: 20, fontWeight: "800", color: theme.text.default }}>Nearby toilets</Text>
             </View>
-            {/* <Pressable
-              onPress={() => navigation?.navigate?.(Routes.DiscoverMapScreen)}
-              android_ripple={{ color: T.state.ripple }}
-              style={({ pressed }) => [
-                {
-                  height: 32,
-                  paddingHorizontal: S.md,
-                  borderRadius: R.lg,
-                  borderWidth: 1.2,
-                  borderColor: T.colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  ...shadow(1),
-                },
-                pressableStyles(pressed),
-              ]}
-            >
-              <MapPinIcon size={20} color={T.colors.primary} />
-            </Pressable> */}
           </View>
 
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
-          }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <WilayaPicker
               // @ts-ignore
               value={selectedWilaya}
@@ -84,7 +74,7 @@ export default function DiscoverScreen() {
               withCounts={false}
               includeAll={false}
               triggerStyle={{ minHeight: 34, borderRadius: R.md }}
-              triggerTextStyle={{ fontWeight: 600, fontSize: 13 }}
+              triggerTextStyle={{ fontWeight: 600 as any, fontSize: 13 }}
             />
 
             <Pressable
@@ -116,6 +106,15 @@ export default function DiscoverScreen() {
           contentContainerStyle={{ padding: S.lg }}
           onEndReachedThreshold={0.2}
           onEndReached={() => { if (hasMore && !loading) fetchNext(); }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[T.colors.primary]}              // Android spinner color
+              tintColor={T.colors.primary as string}   // iOS spinner color
+              progressBackgroundColor={T.bg.surface as string}
+            />
+          }
           ListEmptyComponent={
             !loading ? (
               <View style={{ alignItems: "center", paddingVertical: S["xxl"] }}>

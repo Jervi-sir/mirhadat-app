@@ -5,10 +5,11 @@ import api from "@/utils/api/axios-instance";
 import { ApiRoutes, buildRoute } from "@/utils/api/api";
 import { ToiletFilters } from "@/zustand/discover-store";
 import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ----------------------------- Types ----------------------------- */
 type Lang = "en" | "fr" | "ar";
-
 type TaxonomyRow = { code: string; label: string; icon?: string | null };
 type TaxonomyAllResp = {
   data: {
@@ -17,6 +18,25 @@ type TaxonomyAllResp = {
     amenities?: TaxonomyRow[];
     rules?: TaxonomyRow[];
   };
+};
+
+/* ------------------------ Icon normalization ------------------------ */
+// Map your API icon names → valid MaterialCommunityIcons names
+const ICON_ALIASES: Record<string, string> = {
+  // categories
+  work: "briefcase",
+  bag: "bag-checked",
+  public: "earth",
+  utensils: "silverware-fork-knife",
+  train: "train",
+  coffee: "coffee",
+
+  // (you can extend with amenities/rules if needed)
+};
+const iconName = (raw?: string) => {
+  if (!raw) return undefined as any;
+  const n = raw.toLowerCase().replace(/^mdi:|^md:|^material:/, "");
+  return ICON_ALIASES[n] ?? n;
 };
 
 /* --------------------------- Taxonomy hook --------------------------- */
@@ -86,18 +106,24 @@ export function FilterSheet({
   taxonomyUrl?: string;
   lang?: Lang;
 }) {
+  const insets = useSafeAreaInsets();              // <- safe bottom
+  const FOOTER_H = 64;                             // <- footer height
+
   const [isFree, setIsFree] = useState<boolean | undefined>(initial.isFree);
   const [accessMethod, setAccessMethod] = useState<ToiletFilters["accessMethod"]>(initial.accessMethod);
   const [pricingModel, setPricingModel] = useState<ToiletFilters["pricingModel"]>(initial.pricingModel);
   const [minRating, setMinRating] = useState<number | undefined>(initial.minRating);
   const [amenities, setAmenities] = useState<string[]>(initial.amenities ?? []);
   const [amenitiesText, setAmenitiesText] = useState<string>(initial.amenities?.join(",") || "");
+  const [categories, setCategories] = useState<string[]>(initial.categories ?? []);
 
-  const { loading, err, accessMethods, amenities: amenityOptions } = useTaxonomyAll({
-    taxonomyUrl,
-    lang,
-    enabled: true,
-  });
+  const {
+    loading,
+    err,
+    accessMethods,
+    amenities: amenityOptions,
+    categories: categoryOptionsRaw,
+  } = useTaxonomyAll({ taxonomyUrl, lang, enabled: true });
 
   useEffect(() => {
     setIsFree(initial.isFree);
@@ -106,6 +132,7 @@ export function FilterSheet({
     setMinRating(initial.minRating);
     setAmenities(initial.amenities ?? []);
     setAmenitiesText(initial.amenities?.join(",") || "");
+    setCategories(initial.categories ?? []);
   }, [initial]);
 
   const apply = () => {
@@ -119,18 +146,23 @@ export function FilterSheet({
       pricingModel,
       minRating,
       amenities: finalAmenities,
+      categories, // include categories
     });
     sheetRef.current?.hide();
   };
 
+  // Options (keep icon so chips can render them)
   const accessMethodOptions = useMemo(
-    () => accessMethods.map((r) => ({ code: r.code, label: r.label })),
+    () => accessMethods.map((r) => ({ code: r.code, label: r.label, icon: r.icon })),
     [accessMethods]
   );
-
   const amenityChipOptions = useMemo(
-    () => amenityOptions.map((r) => ({ code: r.code, label: r.label })),
+    () => amenityOptions.map((r) => ({ code: r.code, label: r.label, icon: r.icon })),
     [amenityOptions]
+  );
+  const categoryChipOptions = useMemo(
+    () => categoryOptionsRaw.map((r) => ({ code: r.code, label: r.label, icon: r.icon })),
+    [categoryOptionsRaw]
   );
 
   return (
@@ -139,6 +171,7 @@ export function FilterSheet({
       gestureEnabled
       closeOnTouchBackdrop
       defaultOverlayOpacity={0.3}
+      useBottomSafeAreaPadding={false}
       containerStyle={{
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
@@ -155,7 +188,6 @@ export function FilterSheet({
       safeAreaInsets={{ top: 100, bottom: 0, left: 0, right: 0 }}
     >
       <ScrollView>
-
         <View style={{ padding: S.lg, gap: S.md }}>
           <Text style={{ fontSize: 18, fontWeight: "800", color: T.text.default }}>
             {lang === "fr" ? "Filtres" : lang === "ar" ? "تصفية" : "Filters"}
@@ -183,11 +215,11 @@ export function FilterSheet({
           ) : err ? (
             <RowChips
               options={[
-                { code: "public", label: "Public" },
-                { code: "code", label: "Door code" },
-                { code: "staff", label: "Ask staff" },
-                { code: "key", label: "Key required" },
-                { code: "app", label: "App controlled" },
+                { code: "public", label: "Public", icon: "earth" },
+                { code: "code", label: "Door code", icon: "keypad" },
+                { code: "staff", label: "Ask staff", icon: "account" },
+                { code: "key", label: "Key required", icon: "key" },
+                { code: "app", label: "App controlled", icon: "cellphone" },
               ]}
               value={accessMethod ?? undefined}
               onChange={(v) => setAccessMethod(v as any)}
@@ -206,10 +238,10 @@ export function FilterSheet({
           <SectionLabel text={lang === "fr" ? "Modèle de tarification" : lang === "ar" ? "نموذج التسعير" : "Pricing model"} />
           <RowChips
             options={[
-              { code: "flat", label: "Flat" },
-              { code: "per-visit", label: "Per visit" },
-              { code: "per-30-min", label: "Per 30 min" },
-              { code: "per-60-min", label: "Per 60 min" },
+              { code: "flat", label: "Flat", icon: "cash" },
+              { code: "per-visit", label: "Per visit", icon: "account-arrow-right" },
+              { code: "per-30-min", label: "Per 30 min", icon: "clock-outline" },
+              { code: "per-60-min", label: "Per 60 min", icon: "clock-time-nine-outline" },
             ]}
             value={pricingModel || undefined}
             onChange={(v) => setPricingModel((v as any) ?? null)}
@@ -234,6 +266,26 @@ export function FilterSheet({
               color: T.text.default,
             }}
           />
+
+          {/* Categories */}
+          <SectionLabel text={lang === "fr" ? "Catégories" : lang === "ar" ? "الفئات" : "Categories"} />
+          {loading ? (
+            <View style={{ paddingVertical: S.sm }}>
+              <ActivityIndicator color={T.colors.primary} />
+            </View>
+          ) : err ? (
+            <Text style={{ color: T.text.tertiary }}>
+              {lang === "fr" ? "Impossible de charger les catégories." : lang === "ar" ? "تعذر تحميل الفئات." : "Couldn’t load categories."}
+            </Text>
+          ) : (
+            <MultiChips
+              options={categoryChipOptions}
+              values={categories}
+              onToggle={(code, active) =>
+                setCategories((prev) => (active ? [...prev, code] : prev.filter((c) => c !== code)))
+              }
+            />
+          )}
 
           {/* Amenities */}
           <SectionLabel text={lang === "fr" ? "Équipements" : lang === "ar" ? "التجهيزات" : "Amenities"} />
@@ -268,27 +320,43 @@ export function FilterSheet({
           )}
 
           {/* Apply */}
-          <Pressable
-            onPress={apply}
-            android_ripple={{ color: withAlpha("#fff", 0.2) }}
-            style={({ pressed }) => [
-              {
-                backgroundColor: T.colors.primary,
-                paddingVertical: 12,
-                borderRadius: R.xl,
-                alignItems: "center",
-                marginTop: S.sm,
-                ...shadow(1),
-              },
-              pressableStyles(pressed),
-            ]}
-          >
-            <Text style={{ color: T.text.onPrimary, fontWeight: "800" }}>
-              {lang === "fr" ? "Appliquer" : lang === "ar" ? "تطبيق" : "Apply"}
-            </Text>
-          </Pressable>
+          <View style={{ height: 100 }} />
+        
         </View>
       </ScrollView>
+            {/* STICKY FOOTER */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: S.lg,
+          paddingTop: S.sm,
+          paddingBottom: insets.bottom ? insets.bottom : S.sm,
+          backgroundColor: 'transparent',
+        }}
+      >
+        <Pressable
+          onPress={apply}
+          android_ripple={{ color: withAlpha("#fff", 0.2) }}
+          style={({ pressed }) => [
+            {
+              height: 48,
+              backgroundColor: T.colors.primary,
+              borderRadius: R.xl,
+              alignItems: "center",
+              justifyContent: "center",
+              ...shadow(1),
+            },
+            pressableStyles(pressed),
+          ]}
+        >
+          <Text style={{ color: T.text.onPrimary, fontWeight: "800" }}>
+            {lang === "fr" ? "Appliquer" : lang === "ar" ? "تطبيق" : "Apply"}
+          </Text>
+        </Pressable>
+        </View>
 
     </ActionSheet>
   );
@@ -300,13 +368,14 @@ function SectionLabel({ text }: { text: string }) {
   return <Text style={{ marginBottom: 6, color: T.text.strong, fontWeight: "700" }}>{text}</Text>;
 }
 
+type Opt = { code: string; label: string; icon?: string };
 function RowChips({
   options,
   value,
   onChange,
   allowUnset,
 }: {
-  options: { code: string; label: string }[];
+  options: Opt[];
   value?: string;
   onChange: (v?: string) => void;
   allowUnset?: boolean;
@@ -328,10 +397,21 @@ function RowChips({
                 borderWidth: 1,
                 borderColor: active ? withAlpha(T.colors.primary, 0.7) : T.border.subtle,
                 backgroundColor: active ? withAlpha(T.colors.primary, 0.12) : T.bg.surface,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
               },
               pressableStyles(pressed),
             ]}
           >
+            {opt.icon ? (
+              <MaterialCommunityIcons
+                name={iconName(opt.icon) as any}
+                size={16}
+                color={active ? T.colors.primary : T.text.strong}
+                style={{ marginRight: 2 }}
+              />
+            ) : null}
             <Text style={{ color: active ? T.colors.primary : T.text.strong, fontWeight: "700" }}>{opt.label}</Text>
           </Pressable>
         );
@@ -364,7 +444,7 @@ function MultiChips({
   values,
   onToggle,
 }: {
-  options: { code: string; label: string }[];
+  options: Opt[];
   values: string[];
   onToggle: (code: string, nextActive: boolean) => void;
 }) {
@@ -385,10 +465,21 @@ function MultiChips({
                 borderWidth: 1,
                 borderColor: active ? withAlpha(T.colors.primary, 0.7) : T.border.subtle,
                 backgroundColor: active ? withAlpha(T.colors.primary, 0.12) : T.bg.surface,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
               },
               pressableStyles(pressed),
             ]}
           >
+            {opt.icon ? (
+              <MaterialCommunityIcons
+                name={iconName(opt.icon) as any}
+                size={16}
+                color={active ? T.colors.primary : T.text.strong}
+                style={{ marginRight: 2 }}
+              />
+            ) : null}
             <Text style={{ color: active ? T.colors.primary : T.text.strong, fontWeight: "700" }}>{opt.label}</Text>
           </Pressable>
         );

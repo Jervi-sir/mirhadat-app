@@ -26,7 +26,9 @@ import { ScreenWrapper } from "@/components/screen-wrapper";
 import { ArrowLeft } from "lucide-react-native";
 import { mapsUrl, telUrl, useExternalOpener } from "@/context/external-opener";
 import FavoriteToiletButton from "./favorite-toilet-button";
-import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme";
+import { theme as T, S, R, withAlpha, shadow, pressableStyles, theme, C } from "@/ui/theme";
+import { InfoChip, useIconList } from "@/utils/taxonomy";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 /* ------------------------------ Label maps ------------------------------ */
 
@@ -87,7 +89,7 @@ export default function ToiletOfferScreen() {
       const res = await api.get<{ data: ToiletWithRelationsType }>(`/toilets/${toiletId}`, {
         authIfAvailable: true,
         params: {
-          include: "relations,labels,coords,pricing,counts,meta",
+          include: "relations,labels,coords,pricing,counts,meta,amenities",
         },
       });
       setData(res.data.data);
@@ -280,11 +282,20 @@ export default function ToiletOfferScreen() {
                 data.is_free
                   ? "Free"
                   : data.pricing_model
-                    ? `${priceText} · ${PRICING_LABEL[data.pricing_model] ?? data.pricing_model}`
+                    ? `${priceText}`
                     : priceText
               }
             />
-            <Box label="Today" value={openNowInfo?.todayText || "—"} />
+            <Box
+              label="Per"
+              value={
+                data.is_free
+                  ? "Free"
+                  : data.pricing_model
+                    ? `${PRICING_LABEL[data.pricing_model] ?? data.pricing_model}`
+                    : priceText
+              }
+            />
           </View>
 
           {/* Address + actions */}
@@ -364,28 +375,62 @@ export default function ToiletOfferScreen() {
           )}
 
           {/* Amenities */}
-          {!!data.amenities?.length && (
+          {!!data.amenities_meta?.length && (
             <View style={[styles.card, cardBase]}>
               <Text style={[styles.h2, { color: T.text.default }]}>Amenities</Text>
               <View style={[styles.wrap, { gap: S.sm }]}>
-                {data.amenities.map((code, i) => (
-                  <Chip key={`${code}-${i}`} text={AMENITY_LABEL[code] ?? pretty(code)} />
+                {data.amenities_meta.map((code, i) => (
+                  <View key={i} style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 999,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: C.ink300,
+                  }}>
+                    <MaterialCommunityIcons
+                      name={code.icon as any}
+                      size={16}
+                      color={'#111'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={{ ...theme.typography.label }}>{code.en}</Text>
+                  </View>
                 ))}
               </View>
             </View>
           )}
 
+
           {/* Rules */}
-          {!!data.rules?.length && (
+          {!!data.rules_meta?.length && (
             <View style={[styles.card, cardBase]}>
-              <Text style={[styles.h2, { color: T.text.default }]}>Rules</Text>
+              <Text style={[styles.h2, { color: T.text.default }]}>Amenities</Text>
               <View style={[styles.wrap, { gap: S.sm }]}>
-                {data.rules.map((code, i) => (
-                  <Chip key={`${code}-${i}`} text={RULE_LABEL[code] ?? pretty(code)} />
+                {data.rules_meta.map((code, i) => (
+                  <View key={i} style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 999,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: C.ink300,
+                  }}>
+                    <MaterialCommunityIcons
+                      name={code.icon as any}
+                      size={16}
+                      color={'#111'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={{ ...theme.typography.label }}>{code.en}</Text>
+                  </View>
                 ))}
               </View>
             </View>
           )}
+
 
           {/* Host */}
           {data.owner && (

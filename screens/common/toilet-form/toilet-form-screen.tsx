@@ -88,6 +88,7 @@ const ToiletFormView: React.FC = () => {
       {/* Basic fields */}
       <Card>
         <CoordsSection />
+        <Field label="Name" value={name} onChangeText={setName} />
         <Field label="Address" value={address} onChangeText={setAddress} />
         <Field label="Place hint (optional)" value={placeHint} onChangeText={setPlaceHint} />
         <Field label="Description (optional)" value={description} onChangeText={setDescription} multiline />

@@ -38,7 +38,7 @@ export const PasswordField = ({
           secureTextEntry={!show}
           placeholder=""
           placeholderTextColor={theme.text.tertiary}
-          style={{ flex: 1, color: theme.text.default }}
+          style={{ flex: 1, color: theme.text.default, height: '100%' }}
           returnKeyType="done"
           onSubmitEditing={onSubmitEditing}
         />

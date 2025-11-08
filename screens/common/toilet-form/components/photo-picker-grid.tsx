@@ -1,7 +1,8 @@
 // components/photo-picker-grid.tsx
-import React from "react";
+import React, { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, Pressable, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { useToiletForm } from "../toilet-form-context";
 import { PinIcon, LucideTrash2 } from "lucide-react-native";
 import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme";
@@ -9,6 +10,86 @@ import { theme as T, S, R, withAlpha, shadow, pressableStyles } from "@/ui/theme
 export type PhotoItem =
   | { kind: "local"; localUri: string; is_cover?: boolean }
   | { kind: "remote"; url: string; is_cover?: boolean };
+
+type PickedAsset = {
+  uri: string;
+  width?: number;
+  height?: number;
+};
+
+const TARGETS = [
+  { w: 640, h: 480, ratio: 4 / 3 }, // 480p 4:3
+  { w: 480, h: 480, ratio: 1 },     // 480p 1:1
+];
+
+function chooseBestTarget(w: number, h: number) {
+  const r = w / h;
+  let best = TARGETS[0];
+  let bestDiff = Math.abs(r - TARGETS[0].ratio);
+  for (let i = 1; i < TARGETS.length; i++) {
+    const d = Math.abs(r - TARGETS[i].ratio);
+    if (d < bestDiff) {
+      best = TARGETS[i];
+      bestDiff = d;
+    }
+  }
+  return best;
+}
+
+function computeCenteredCropRect(srcW: number, srcH: number, targetRatio: number) {
+  const srcRatio = srcW / srcH;
+  if (srcRatio > targetRatio) {
+    // too wide → crop width
+    const cropW = Math.round(srcH * targetRatio);
+    const x = Math.round((srcW - cropW) / 2);
+    return { originX: x, originY: 0, width: cropW, height: srcH };
+  } else {
+    // too tall → crop height
+    const cropH = Math.round(srcW / targetRatio);
+    const y = Math.round((srcH - cropH) / 2);
+    return { originX: 0, originY: y, width: srcW, height: cropH };
+  }
+}
+
+async function processAssetTo480p(asset: PickedAsset): Promise<string> {
+  // Fallback: if width/height missing, do a no-op resize to read metadata
+  let srcW = asset.width ?? 0;
+  let srcH = asset.height ?? 0;
+
+  if (!srcW || !srcH) {
+    const tmp = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [],
+      { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    // The returned object includes width/height
+    srcW = tmp.width ?? 0;
+    srcH = tmp.height ?? 0;
+    asset.uri = tmp.uri; // keep latest uri
+  }
+
+  if (!srcW || !srcH) {
+    // As a last resort, just return original
+    return asset.uri;
+  }
+
+  const target = chooseBestTarget(srcW, srcH);
+  const cropRect = computeCenteredCropRect(srcW, srcH, target.ratio);
+
+  const cropped = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    [{ crop: cropRect }],
+    { compress: 1, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  const resized = await ImageManipulator.manipulateAsync(
+    cropped.uri,
+    [{ resize: { width: target.w, height: target.h } }],
+    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  return resized.uri;
+}
 
 export default function PhotoPickerGrid({
   value,
@@ -20,6 +101,7 @@ export default function PhotoPickerGrid({
   max?: number;
 }) {
   const { uploading, uploadProgress } = useToiletForm();
+  const [processing, setProcessing] = useState(false);
 
   const ensureSingleCover = (arr: PhotoItem[]) => {
     const hasCover = arr.some((p) => p.is_cover);
@@ -39,19 +121,36 @@ export default function PhotoPickerGrid({
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 0.9,
+      // we will handle cropping/compression ourselves
+      quality: 1,
       selectionLimit: remaining,
     });
     if (res.canceled) return;
 
-    const locals: PhotoItem[] = (res.assets ?? []).slice(0, remaining).map((a, idx) => ({
-      kind: "local",
-      localUri: a.uri,
-      is_cover: value.length === 0 && idx === 0 ? true : false,
-    }));
+    try {
+      setProcessing(true);
 
-    const next = ensureSingleCover([...value, ...locals]);
-    onChange(next);
+      const assets = (res.assets ?? []).slice(0, remaining) as PickedAsset[];
+
+      // Auto-crop + compress to either 640×480 (4:3) or 480×480 (1:1)
+      const processedUris = await Promise.all(
+        assets.map((a) => processAssetTo480p({ uri: a.uri, width: a.width, height: a.height }))
+      );
+
+      const locals: PhotoItem[] = processedUris.map((uri, idx) => ({
+        kind: "local",
+        localUri: uri,
+        is_cover: value.length === 0 && idx === 0 ? true : false,
+      }));
+
+      const next = ensureSingleCover([...value, ...locals]);
+      onChange(next);
+    } catch (e) {
+      console.warn(e);
+      Alert.alert("Image processing failed", "Could not process selected photos.");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const toggleCover = (index: number) => {
@@ -78,13 +177,7 @@ export default function PhotoPickerGrid({
   return (
     <View>
       <View style={{ gap: S.sm }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={{ fontWeight: "800", color: T.text.strong as string }}>Photos</Text>
           <Text style={{ color: T.text.tertiary as string }}>
             {value.length}/{max}
@@ -102,7 +195,7 @@ export default function PhotoPickerGrid({
               return (
                 <Pressable
                   onPress={pick}
-                  disabled={uploading}
+                  disabled={uploading || processing}
                   android_ripple={{ color: withAlpha("#000", 0.06) }}
                   style={({ pressed }) => [
                     {
@@ -119,7 +212,7 @@ export default function PhotoPickerGrid({
                     pressableStyles(pressed),
                   ]}
                 >
-                  {uploading ? (
+                  {uploading || processing ? (
                     <ActivityIndicator color={T.colors.primary as string} />
                   ) : (
                     <>
@@ -165,12 +258,7 @@ export default function PhotoPickerGrid({
                     onPress={() => toggleCover(index)}
                     android_ripple={{ color: withAlpha("#fff", 0.15) }}
                     style={({ pressed }) => [
-                      {
-                        flex: 1,
-                        alignItems: "center",
-                        paddingVertical: 8,
-                        opacity: isCover ? 1 : 0.9,
-                      },
+                      { flex: 1, alignItems: "center", paddingVertical: 8, opacity: isCover ? 1 : 0.9 },
                       pressableStyles(pressed),
                     ]}
                   >
@@ -189,8 +277,8 @@ export default function PhotoPickerGrid({
                   </Pressable>
                 </View>
 
-                {/* Uploading block */}
-                {uploading && (
+                {/* Uploading/processing block */}
+                {(uploading || processing) && (
                   <View
                     style={{
                       position: "absolute",

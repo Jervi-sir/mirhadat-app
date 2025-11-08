@@ -344,10 +344,15 @@ export const ToiletFormProvider: React.FC<ProviderProps> = ({
         form.append("files[]", { uri, name, type: "image/jpeg" });
       }
 
-      const res = await api.post(buildRoute(ApiRoutes.uploads.toiletPhoto), form, {
-        authRequired: true,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.post(
+        buildRoute(ApiRoutes.uploads.toiletPhoto),
+        form,
+        {
+          authRequired: true,
+          headers: { "Content-Type": "multipart/form-data" },
+          timeout: 120_000,
+        }
+      );
 
       const returned = Array.isArray(res.data?.data) ? res.data.data : [];
       if (returned.length !== slice.length) throw new Error("Upload mismatch: server returned a different number of files.");

@@ -115,7 +115,7 @@ function mergeById<T extends { id: number | string }>(prev: T[], next: T[]) {
 /* ============================ Local request helper ============================ */
 async function fetchMarkers(params: MapDiscoverParams, opts?: { signal?: AbortSignal }) {
   const res = await api.get<MarkerIndexResponse>('/toilets-markers', {
-    authRequired: true,
+    authIfAvailable: true,
     params,
     signal: opts?.signal,
   });

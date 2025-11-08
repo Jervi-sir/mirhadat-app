@@ -23,7 +23,7 @@ export function ToiletCard({
   const priceText = data.is_free
     ? "Free"
     : data.price_cents != null
-      ? `${(data.price_cents / 100).toFixed(0)} DZD`
+      ? `${data.price_cents} DZD`
       : "—";
 
   const pricingModelText =
@@ -37,8 +37,27 @@ export function ToiletCard({
             ? "flat rate"
             : "";
 
-  const amenitiesPreview = (data.amenities ?? []).slice(0, 4).join(", ");
+  // const amenitiesPreview = (data.amenities ?? []).slice(0, 4).join(", ");
   const hasMoreAmenities = (data.amenities?.length ?? 0) > 4 ? "…" : "";
+
+  const amenitiesPreview = useMemo(() => {
+    const list = (data.amenities_meta ?? [])
+      .map((a) => a?.fr)
+      .filter(Boolean);
+    const shown = list.slice(0, 4).join(", ");
+    const hasMore = list.length > 4 ? "…" : "";
+    return shown + hasMore;
+  }, [data.amenities_meta]);
+
+  const rulesPreview = useMemo(() => {
+    const list = (data.rules_meta ?? [])
+      .map((r) => r?.fr)
+      .filter(Boolean);
+    const shown = list.slice(0, 2).join(", ");
+    const hasMore = list.length > 2 ? "…" : "";
+    return shown + hasMore;
+  }, [data.rules_meta]);
+
 
   const coverUri =
     typeof data?.cover_photo === "string"
@@ -94,7 +113,8 @@ export function ToiletCard({
           {/* Title + rating */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: S.sm }}>
             <Text style={{ fontSize: 16, fontWeight: "700", color: T.text.default }} numberOfLines={1}>
-              {data.name}
+              {data.address_line}
+              {/* {data.name} */}
             </Text>
 
           </View>
@@ -102,7 +122,7 @@ export function ToiletCard({
 
           {/* Address */}
           <Text numberOfLines={1} style={{ fontSize: 12, marginTop: 4, color: T.text.tertiary }}>
-            {data.address_line}
+            {data.wilaya_text?.code}
           </Text>
 
           {/* Amenities */}

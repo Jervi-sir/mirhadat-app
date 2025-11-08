@@ -128,6 +128,7 @@ export default function AuthScreen({ onSuccess }: Props) {
               value={wilaya ?? null}
               onChangeWilaya={(w) => setWilaya(w)}
               includeAll={false}
+              scope={"all"}
               lang="fr"
               triggerStyle={{
                 borderWidth: 1,

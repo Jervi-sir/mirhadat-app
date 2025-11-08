@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import api from "@/utils/api/axios-instance";
 import axios, { AxiosError } from "axios";
-import type { WilayaType, ToiletWithRelationsType } from "@/utils/types";
+import type { WilayaType, ToiletWithRelationsType, ToiletCategoryType } from "@/utils/types";
 import { ApiRoutes, buildRoute } from "@/utils/api/api";
 
 /* ============================ Request Types ============================ */
@@ -47,6 +47,7 @@ export type ToiletFilters = {
   pricingModel?: "flat" | "per-visit" | "per-30-min" | "per-60-min" | null;
   minRating?: number;
   amenities?: string[]; // array of codes
+  categories?: string[];
 };
 
 type DiscoverState = {

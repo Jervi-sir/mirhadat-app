@@ -1,7 +1,7 @@
 // @utils/api/api.ts
 // ---- Server config ----------------------------------------------------------
-export const SERVER_IP = '192.168.1.100:8000';
-export const SERVER_URL = `http://${SERVER_IP}`;           // ensure protocol
+export const SERVER_IP = 'mirhadati.octaprize.com';
+export const SERVER_URL = `https://${SERVER_IP}`;           // ensure protocol
 export const API_PREFIX = '/api';
 export const BASE_URL = `${SERVER_URL}${API_PREFIX}`;      // -> http://192.168.1.100:8000/api
 

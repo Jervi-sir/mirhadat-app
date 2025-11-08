@@ -24,6 +24,8 @@ import { useAuthStore } from "@/zustand/auth-store";
 import { useAuthPrompt } from "@/context/auth-prompt";
 import { getToken } from "@/utils/api/token-manager";
 
+const MAX_TOILETS = 5;
+
 /* ---------- Types ---------- */
 const HostDashboardScreen: React.FC = () => {
   const navigation: any = useNavigation();
@@ -201,10 +203,20 @@ const HostDashboardScreen: React.FC = () => {
     [navigation]
   );
 
-  const createToilet = useCallback(
-    () => navigation.navigate(Routes.ToiletFormScreen, { toiletId: undefined }),
-    [navigation]
-  );
+  // ✅ Limit create to 3
+  const canAddMore = (toilets?.length ?? 0) < MAX_TOILETS;
+
+  const createToilet = useCallback(() => {
+    if (!canAddMore) {
+      Alert.alert(
+        "Limit reached",
+        `You can create up to ${MAX_TOILETS} toilets. Delete an existing one to add a new toilet.`
+      );
+      return;
+    }
+    navigation.navigate(Routes.ToiletFormScreen, { toiletId: undefined });
+  }, [navigation, canAddMore]);
+
 
   /* ---------- Logout ---------- */
   const handleLogout = () => {
@@ -460,29 +472,44 @@ const HostDashboardScreen: React.FC = () => {
 
             <View style={{ height: S.lg }} />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.title, { color: T.text.default }]}>My toilets</Text>
-              <Pressable
-                onPress={createToilet}
-                android_ripple={{ color: withAlpha("#000", 0.06) }}
-                style={({ pressed }) => [
-                  {
-                    height: 34,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    paddingHorizontal: S.lg,
-                    borderRadius: R.md,
-                    borderWidth: 1,
-                    borderColor: T.border.subtle,
-                    backgroundColor: T.bg.surface,
-                    ...shadow(1),
-                  },
-                  pressed ? { opacity: 0.95, transform: [{ scale: 0.98 }] } : null,
-                ]}
-              >
-                <Plus size={16} color={T.text.strong as string} />
-                <Text style={{ color: T.text.strong as string, fontWeight: "800" }}>Add toilet</Text>
-              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.title, { color: T.text.default }]}>My toilets</Text>
+              </View>
+
+              <View style={{ flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+                <Text style={{ color: T.text.tertiary, ...T.typography.label }}>
+                  {toilets.length}/{MAX_TOILETS} toilets used
+                </Text>
+                <Pressable
+                  onPress={createToilet}
+                  disabled={!canAddMore}
+                  android_ripple={{ color: withAlpha("#000", 0.06) }}
+                  style={({ pressed }) => [
+                    {
+                      height: 34,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: 'center',
+                      alignSelf: 'flex-end',
+                      gap: 2,
+                      paddingHorizontal: S.sm,
+                      borderRadius: R.md,
+                      borderWidth: 1,
+                      borderColor: T.border.subtle,
+                      backgroundColor: T.bg.surface,
+                      opacity: canAddMore ? 1 : 0.6, // 🔒 dim when disabled
+                      ...shadow(1),
+                    },
+                    pressed && canAddMore ? { opacity: 0.95, transform: [{ scale: 0.98 }] } : null,
+                  ]}
+                >
+                  {canAddMore 
+                    ? <Plus size={16} color={T.text.strong as string} />
+                    : <Text style={{ color: T.text.strong as string, ...T.typography.label }}>Limit reached </Text>
+                  }
+                </Pressable>
+              </View>
+
             </View>
           </View>
         }
@@ -505,25 +532,29 @@ const HostDashboardScreen: React.FC = () => {
               <View style={{ height: S.sm }} />
               <Pressable
                 onPress={createToilet}
+                disabled={!canAddMore}
                 android_ripple={{ color: withAlpha("#000", 0.06) }}
                 style={({ pressed }) => [
                   {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 8,
-                    paddingHorizontal: S.lg,
+                    paddingHorizontal: S.md,
                     paddingVertical: 12,
                     borderRadius: R.lg,
                     borderWidth: 1,
                     borderColor: T.border.subtle,
                     backgroundColor: T.bg.surface,
+                    opacity: canAddMore ? 1 : 0.6,
                     ...shadow(1),
                   },
-                  pressed ? { opacity: 0.95, transform: [{ scale: 0.98 }] } : null,
+                  pressed && canAddMore ? { opacity: 0.95, transform: [{ scale: 0.98 }] } : null,
                 ]}
               >
                 <Plus size={16} color={T.text.strong as string} />
-                <Text style={{ color: T.text.strong as string, fontWeight: "800" }}>Add toilet</Text>
+                <Text style={{ color: T.text.strong as string, fontWeight: "800" }}>
+                  {canAddMore ? "Add toilet" : "Limit reached"}
+                </Text>
               </Pressable>
             </View>
           )
